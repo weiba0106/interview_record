@@ -243,6 +243,19 @@ Set-Location ../..
 
 POSIX 环境使用相同命令并将 `npm.cmd` 替换为 `npm`。
 
+### 依赖、开发与质量命令
+
+- 前端依赖安装已验证：在 `apps/web` 运行 `npm.cmd install`；CI 和 POSIX 环境分别使用 `npm ci` 与 `npm ci`。
+- 前端本地开发命令为 `npm.cmd run dev`（POSIX：`npm run dev`）。这是长期运行的开发服务器，不作为完成检查执行。
+- 前端单元测试、类型检查和生产构建使用上方已验证的三个命令；E2E 测试命令为 `npm.cmd run test:e2e`（POSIX：`npm run test:e2e`）。本阶段仅验证 Playwright 用例发现；需要已安装浏览器与本地 Vite 服务才可执行完整浏览器测试。
+- 前端格式化和静态检查脚本为 `npm.cmd run format`、`npm.cmd run lint`（POSIX：将 `npm.cmd` 替换为 `npm`）。两者都会重写文件（`--write`/`--fix`），因此在提交前先检查 Git 差异。
+- 后端依赖由 `apps/api/mvnw.cmd` 自动解析；本阶段仅有上下文单元测试，尚未建立 MySQL 集成测试、迁移、回滚或应用启动配置。后续任务建立这些功能后，必须补充并验证对应命令。
+
+### MySQL 与外部测试路径
+
+- Docker 未安装，故 `docker compose up -d mysql mailpit`、`docker compose down` 和 Compose MySQL 启动未在本机验证，当前不可用。
+- 外部测试数据库路径已在 `.env.example` 定义：仅当 `TEST_DB_URL`、`TEST_DB_USERNAME` 和 `TEST_DB_PASSWORD` 全部指向 `interview_record_test` 时，后续 MySQL 集成测试才可运行。当前阶段尚未提供测试数据库创建、迁移或回滚命令。
+
 ### 目录结构
 
 - `apps/api`：Spring Boot API、资源文件和 JUnit 测试。
