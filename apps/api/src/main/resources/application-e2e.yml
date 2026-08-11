@@ -1,0 +1,14 @@
+spring:
+  mail:
+    host: localhost
+    port: 1
+
+server:
+  servlet:
+    session:
+      cookie:
+        secure: false
+
+app:
+  frontend-base-url: http://localhost:5173
+  e2e-mailbox-path: ${E2E_MAILBOX_PATH}

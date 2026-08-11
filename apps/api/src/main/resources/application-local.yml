@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3307/interview_record?serverTimezone=UTC}
+    username: ${DB_USERNAME:interview_record}
+    password: ${DB_PASSWORD:local-dev-password}
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+
+server:
+  servlet:
+    session:
+      cookie:
+        secure: false
+
+app:
+  frontend-base-url: ${APP_BASE_URL:http://localhost:5173}

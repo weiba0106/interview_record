@@ -1,0 +1,67 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4.9
+        env:
+          MYSQL_DATABASE: interview_record_test
+          MYSQL_USER: test
+          MYSQL_PASSWORD: test
+          MYSQL_ROOT_PASSWORD: root-test
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot-test"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      TEST_DB_URL: jdbc:mysql://127.0.0.1:3306/interview_record_test?serverTimezone=UTC
+      TEST_DB_USERNAME: test
+      TEST_DB_PASSWORD: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: ./mvnw verify
+        working-directory: apps/api
+      - run: npm ci
+        working-directory: apps/web
+      - run: npm run test:unit -- --run
+        working-directory: apps/web
+      - run: npm run type-check
+        working-directory: apps/web
+      - run: npm run build
+        working-directory: apps/web
+      - run: npm exec playwright install --with-deps chromium
+        working-directory: apps/web
+      - name: Verify the complete account lifecycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          mailbox="$GITHUB_WORKSPACE/apps/api/target/e2e-mailbox/messages.jsonl"
+          export E2E_MAILBOX_PATH="$mailbox"
+          mkdir -p "$(dirname "$mailbox")"
+          trap 'kill "${api_pid:-}" "${web_pid:-}" 2>/dev/null || true; rm -f "$mailbox"' EXIT
+          (cd apps/api && E2E_MAILBOX_PATH="$mailbox" DB_URL="$TEST_DB_URL" DB_USERNAME="$TEST_DB_USERNAME" DB_PASSWORD="$TEST_DB_PASSWORD" \
+            ./mvnw -Dspring-boot.run.profiles=e2e spring-boot:run) > "$RUNNER_TEMP/interview-record-api.log" 2>&1 &
+          api_pid=$!
+          (cd apps/web && npm run dev -- --host 127.0.0.1) > "$RUNNER_TEMP/interview-record-web.log" 2>&1 &
+          web_pid=$!
+          for attempt in {1..90}; do curl --fail --silent http://localhost:8080/actuator/health >/dev/null && break; sleep 1; done
+          curl --fail --silent http://localhost:8080/actuator/health >/dev/null
+          for attempt in {1..45}; do curl --fail --silent http://localhost:5173 >/dev/null && break; sleep 1; done
+          curl --fail --silent http://localhost:5173 >/dev/null
+          (cd apps/web && E2E_EXTERNAL_SERVERS=true PLAYWRIGHT_BASE_URL=http://localhost:5173 npm run test:e2e -- account-lifecycle.spec.ts)
