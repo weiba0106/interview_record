@@ -12,6 +12,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.interviewrecord.auth.application.RegistrationResult;
 import com.interviewrecord.auth.application.RegistrationService;
 import com.interviewrecord.auth.application.EmailVerificationService;
+import com.interviewrecord.auth.application.AuthService;
+import com.interviewrecord.auth.application.PasswordResetService;
 import com.interviewrecord.common.error.EmailAlreadyRegisteredException;
 import com.interviewrecord.common.error.InvalidRegistrationException;
 import com.interviewrecord.common.error.RateLimitExceededException;
@@ -36,6 +38,8 @@ class RegistrationApiTest {
     @Autowired MockMvc mvc;
     @MockitoBean RegistrationService registrationService;
     @MockitoBean EmailVerificationService emailVerificationService;
+    @MockitoBean AuthService authService;
+    @MockitoBean PasswordResetService passwordResetService;
 
     @Test
     void registersWithCsrfAndReturnsOnlyPublicFields() throws Exception {

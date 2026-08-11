@@ -49,6 +49,8 @@ class LoginSessionApiTest {
     @MockitoBean EmailVerificationService emailVerificationService;
     @MockitoBean AuthService authService;
     @MockitoBean PasswordResetService passwordResetService;
+    @MockitoBean com.interviewrecord.preference.application.PreferenceService preferenceService;
+    @MockitoBean com.interviewrecord.auth.application.AccountDeletionService accountDeletionService;
 
     @Test
     void verifiedUserLogsInAndSessionCanReadCurrentUser() throws Exception {

@@ -10,6 +10,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.interviewrecord.auth.application.EmailVerificationService;
 import com.interviewrecord.auth.application.RegistrationService;
+import com.interviewrecord.auth.application.AuthService;
+import com.interviewrecord.auth.application.PasswordResetService;
 import com.interviewrecord.common.config.SecurityConfig;
 import com.interviewrecord.common.error.GlobalExceptionHandler;
 import com.interviewrecord.common.error.InvalidRegistrationException;
@@ -34,6 +36,8 @@ class EmailVerificationApiTest {
     @Autowired MockMvc mvc;
     @MockitoBean RegistrationService registrationService;
     @MockitoBean EmailVerificationService verificationService;
+    @MockitoBean AuthService authService;
+    @MockitoBean PasswordResetService passwordResetService;
 
     @Test
     void verifiesTokenWithCsrfAndReturnsNoContent() throws Exception {
