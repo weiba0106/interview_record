@@ -7,16 +7,13 @@ import com.interviewrecord.auth.infrastructure.JpaUserRepository;
 import com.interviewrecord.common.error.InvalidRegistrationException;
 import com.interviewrecord.common.token.IssuedToken;
 import com.interviewrecord.common.token.SecureTokenService;
-import com.interviewrecord.mail.application.MailGateway;
+import com.interviewrecord.mail.application.DeferredMailDelivery;
 import jakarta.mail.internet.InternetAddress;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
-import org.springframework.mail.MailException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -25,22 +22,21 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 @Service
 @ConditionalOnExpression("'${spring.datasource.url:}' != ''")
 public class EmailVerificationService {
-    private static final Logger log = LoggerFactory.getLogger(EmailVerificationService.class);
     private static final Duration TOKEN_LIFETIME = Duration.ofHours(24);
     private final JpaUserRepository users;
     private final JpaEmailVerificationTokenRepository tokens;
     private final RateLimitService rateLimits;
     private final SecureTokenService secureTokens;
-    private final MailGateway mail;
+    private final DeferredMailDelivery mailDelivery;
     private final Clock clock;
 
     public EmailVerificationService(JpaUserRepository users, JpaEmailVerificationTokenRepository tokens,
-            RateLimitService rateLimits, SecureTokenService secureTokens, MailGateway mail, Clock clock) {
+            RateLimitService rateLimits, SecureTokenService secureTokens, DeferredMailDelivery mailDelivery, Clock clock) {
         this.users = users;
         this.tokens = tokens;
         this.rateLimits = rateLimits;
         this.secureTokens = secureTokens;
-        this.mail = mail;
+        this.mailDelivery = mailDelivery;
         this.clock = clock;
     }
 
@@ -58,7 +54,7 @@ public class EmailVerificationService {
     @Transactional
     public void resend(String email, String clientIp) {
         String normalizedEmail = normalizeEmail(email);
-        rateLimits.check("resend-verification-cooldown", normalizedEmail, 1, Duration.ofMinutes(1), Duration.ofMinutes(1));
+        boolean cooldownActive = isCooldownActive(normalizedEmail);
         rateLimits.check("resend-verification-email", normalizedEmail, 5, Duration.ofHours(1), Duration.ofHours(1));
         rateLimits.check("resend-verification-ip", requireClientIp(clientIp), 5, Duration.ofHours(1), Duration.ofHours(1));
 
@@ -69,7 +65,7 @@ public class EmailVerificationService {
         // without creating a token or sending mail for an address that must remain private.
         long tokenOwnerId = user == null ? -1L : user.id();
         tokens.findByUserId(tokenOwnerId).forEach(token -> token.consume(now));
-        if (user == null || user.isVerified()) return;
+        if (user == null || user.isVerified() || cooldownActive) return;
         tokens.save(new EmailVerificationToken(user, issued.sha256(), issued.expiresAt(), now));
         sendAfterCommit(normalizedEmail, issued.rawValue());
     }
@@ -77,12 +73,18 @@ public class EmailVerificationService {
     private void sendAfterCommit(String email, String rawToken) {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override public void afterCommit() {
-                try { mail.sendVerificationEmail(email, rawToken); }
-                catch (MailException exception) {
-                    log.atWarn().addKeyValue("error_code", "VERIFICATION_DELIVERY_FAILED").log("verification_delivery_failed");
-                }
+                mailDelivery.sendVerificationEmail(email, rawToken);
             }
         });
+    }
+
+    private boolean isCooldownActive(String email) {
+        try {
+            rateLimits.check("resend-verification-cooldown", email, 1, Duration.ofMinutes(1), Duration.ofMinutes(1));
+            return false;
+        } catch (com.interviewrecord.common.error.RateLimitExceededException exception) {
+            return true;
+        }
     }
 
     private InvalidRegistrationException invalidToken() {

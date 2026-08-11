@@ -88,7 +88,9 @@ class EmailVerificationServiceTest extends MySqlIntegrationTestBase {
         verificationService.resend("known-first-resend@example.com", "127.0.0.31");
         verificationService.resend("unknown-first-resend@example.com", "127.0.0.32");
 
-        assertThat(mail.verificationMessages()).hasSize(2);
+        // Registration seeds the private cooldown. The public resend outcome is
+        // still accepted for both addresses, but does not deliver a second mail.
+        assertThat(mail.verificationMessages()).hasSize(1);
     }
 
     @Test
@@ -121,11 +123,10 @@ class EmailVerificationServiceTest extends MySqlIntegrationTestBase {
     void enforcesCooldownAndPerEmailAndPerIpHourlyCaps() {
         register("email-cap@example.com", "127.0.0.7");
         verificationService.resend("email-cap@example.com", "127.0.0.7");
-        assertThatThrownBy(() -> verificationService.resend("email-cap@example.com", "127.0.0.7"))
-                .isInstanceOf(RateLimitExceededException.class);
+        verificationService.resend("email-cap@example.com", "127.0.0.7");
 
         CLOCK.set(CLOCK.instant().plusSeconds(61));
-        for (int attempt = 0; attempt < 4; attempt++) {
+        for (int attempt = 0; attempt < 3; attempt++) {
             verificationService.resend("email-cap@example.com", "127.0.0.7");
             CLOCK.set(CLOCK.instant().plusSeconds(61));
         }

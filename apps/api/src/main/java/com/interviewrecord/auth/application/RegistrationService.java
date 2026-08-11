@@ -10,16 +10,13 @@ import com.interviewrecord.common.token.SecureTokenService;
 import com.interviewrecord.common.error.EmailAlreadyRegisteredException;
 import com.interviewrecord.common.error.InvalidRegistrationException;
 import com.interviewrecord.defaults.application.UserDefaultsService;
-import com.interviewrecord.mail.application.MailGateway;
+import com.interviewrecord.mail.application.DeferredMailDelivery;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
 import jakarta.mail.internet.InternetAddress;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
-import org.springframework.mail.MailException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +26,6 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 @Service
 @ConditionalOnExpression("'${spring.datasource.url:}' != ''")
 public class RegistrationService {
-    private static final Logger log = LoggerFactory.getLogger(RegistrationService.class);
     private final JpaUserRepository users;
     private final JpaEmailVerificationTokenRepository verificationTokens;
     private final UserDefaultsService defaults;
@@ -37,13 +33,13 @@ public class RegistrationService {
     private final PasswordPolicy passwords;
     private final PasswordEncoder passwordEncoder;
     private final SecureTokenService secureTokens;
-    private final MailGateway mail;
+    private final DeferredMailDelivery mailDelivery;
     private final Clock clock;
     public RegistrationService(JpaUserRepository users, JpaEmailVerificationTokenRepository verificationTokens,
             UserDefaultsService defaults, RateLimitService rateLimits, PasswordPolicy passwords, PasswordEncoder passwordEncoder,
-            SecureTokenService secureTokens, MailGateway mail, Clock clock) {
+            SecureTokenService secureTokens, DeferredMailDelivery mailDelivery, Clock clock) {
         this.users = users; this.verificationTokens = verificationTokens; this.defaults = defaults; this.rateLimits = rateLimits;
-        this.passwords = passwords; this.passwordEncoder = passwordEncoder; this.secureTokens = secureTokens; this.mail = mail; this.clock = clock;
+        this.passwords = passwords; this.passwordEncoder = passwordEncoder; this.secureTokens = secureTokens; this.mailDelivery = mailDelivery; this.clock = clock;
     }
     @Transactional
     public RegistrationResult register(RegisterCommand command) {
@@ -62,10 +58,7 @@ public class RegistrationService {
         verificationTokens.save(new EmailVerificationToken(user, issued.sha256(), issued.expiresAt(), now));
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override public void afterCommit() {
-                try { mail.sendVerificationEmail(email, issued.rawValue()); }
-                catch (MailException exception) {
-                    log.atWarn().addKeyValue("error_code", "VERIFICATION_DELIVERY_FAILED").log("verification_delivery_failed");
-                }
+                mailDelivery.sendVerificationEmail(email, issued.rawValue());
             }
         });
         return new RegistrationResult(user.id(), email);

@@ -8,15 +8,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Service
 @ConditionalOnExpression("'${spring.datasource.url:}' != ''")
 public class AccountDeletionService {
-    private static final Logger log = LoggerFactory.getLogger(AccountDeletionService.class);
     private final JpaUserRepository users;
     private final PasswordEncoder passwordEncoder;
     private final SpringSessionRevoker sessionRevoker;
@@ -34,18 +29,11 @@ public class AccountDeletionService {
             throw new InvalidRegistrationException("INVALID_PASSWORD");
         }
         String email = user.email().trim().toLowerCase(java.util.Locale.ROOT);
+        // Revocation must succeed before the irreversible account cascade. If the
+        // session store is unavailable, leave the account intact rather than
+        // deleting it while other authenticated sessions remain usable.
+        sessionRevoker.revokeAllForPrincipal(email);
         users.delete(user);
         users.flush();
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                try {
-                    sessionRevoker.revokeAllForPrincipal(email);
-                } catch (RuntimeException exception) {
-                    log.atWarn().addKeyValue("error_code", "SESSION_REVOCATION_FAILED")
-                            .log("session_revocation_failed");
-                }
-            }
-        });
     }
 }

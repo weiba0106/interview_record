@@ -9,16 +9,13 @@ import com.interviewrecord.common.error.InvalidRegistrationException;
 import com.interviewrecord.common.security.PasswordPolicy;
 import com.interviewrecord.common.token.IssuedToken;
 import com.interviewrecord.common.token.SecureTokenService;
-import com.interviewrecord.mail.application.MailGateway;
+import com.interviewrecord.mail.application.DeferredMailDelivery;
 import jakarta.mail.internet.InternetAddress;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
-import org.springframework.mail.MailException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +25,6 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 @Service
 @ConditionalOnExpression("'${spring.datasource.url:}' != ''")
 public class PasswordResetService {
-    private static final Logger log = LoggerFactory.getLogger(PasswordResetService.class);
     private static final Duration TOKEN_LIFETIME = Duration.ofHours(1);
     private static final Duration RATE_WINDOW = Duration.ofHours(1);
     private static final int RATE_LIMIT = 5;
@@ -40,12 +36,12 @@ public class PasswordResetService {
     private final PasswordPolicy passwordPolicy;
     private final PasswordEncoder passwordEncoder;
     private final SpringSessionRevoker sessionRevoker;
-    private final MailGateway mail;
+    private final DeferredMailDelivery mailDelivery;
     private final Clock clock;
 
     public PasswordResetService(JpaUserRepository users, JpaPasswordResetTokenRepository tokens,
             RateLimitService rateLimits, SecureTokenService secureTokens, PasswordPolicy passwordPolicy,
-            PasswordEncoder passwordEncoder, SpringSessionRevoker sessionRevoker, MailGateway mail, Clock clock) {
+            PasswordEncoder passwordEncoder, SpringSessionRevoker sessionRevoker, DeferredMailDelivery mailDelivery, Clock clock) {
         this.users = users;
         this.tokens = tokens;
         this.rateLimits = rateLimits;
@@ -53,7 +49,7 @@ public class PasswordResetService {
         this.passwordPolicy = passwordPolicy;
         this.passwordEncoder = passwordEncoder;
         this.sessionRevoker = sessionRevoker;
-        this.mail = mail;
+        this.mailDelivery = mailDelivery;
         this.clock = clock;
     }
 
@@ -98,12 +94,7 @@ public class PasswordResetService {
     private void sendAfterCommit(String email, String rawToken) {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override public void afterCommit() {
-                try {
-                    mail.sendPasswordResetEmail(email, rawToken);
-                } catch (MailException exception) {
-                    log.atWarn().addKeyValue("error_code", "PASSWORD_RESET_DELIVERY_FAILED")
-                            .log("password_reset_delivery_failed");
-                }
+                mailDelivery.sendPasswordResetEmail(email, rawToken);
             }
         });
     }
