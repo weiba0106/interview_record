@@ -23,6 +23,13 @@ public class PreferenceService {
         this.clock = clock;
     }
 
+    @Transactional(readOnly = true)
+    public PreferenceDtos.PreferenceResponse get(long userId) {
+        UserPreference preference = preferences.requireByUserId(userId);
+        return new PreferenceDtos.PreferenceResponse(preference.user().displayName(), preference.timeZone(), preference.theme(),
+                preference.interviewReminderOffsets(), preference.deadlineReminderOffsets());
+    }
+
     @Transactional
     public PreferenceDtos.PreferenceResponse update(long userId, PreferenceDtos.UpdatePreferencesRequest request) {
         validateTimeZone(request.timeZone());

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElButton, ElDialog, ElInput } from 'element-plus'
 import PreferenceForm from '@/features/preferences/components/PreferenceForm.vue'
-import { deleteAccount, updatePreferences, type Preferences } from '@/features/preferences/api/preferences.api'
+import { deleteAccount, getPreferences, updatePreferences, type Preferences } from '@/features/preferences/api/preferences.api'
 import { isApiRequestError } from '@/shared/api/error'
 import { useAuthStore } from '@/shared/auth/auth.store'
 
@@ -23,12 +23,25 @@ const preferences = computed<Preferences>(() => savedPreferences.value ?? ({
   deadlineReminderOffsets: [1440],
 }))
 
+function applySavedPreferences(saved: Preferences) {
+  savedPreferences.value = saved
+  if (auth.user) auth.user = { ...auth.user, displayName: saved.displayName, timeZone: saved.timeZone, theme: saved.theme }
+}
+
+async function loadPreferences() {
+  try {
+    applySavedPreferences(await getPreferences())
+  } catch (caught) {
+    error.value = isApiRequestError(caught) ? caught.apiError.message : '加载偏好失败，请稍后重试'
+  }
+}
+
+onMounted(() => { void loadPreferences() })
+
 async function savePreferences(next: Preferences) {
   error.value = ''; message.value = ''
   try {
-    const saved = await updatePreferences(next)
-    savedPreferences.value = saved
-    if (auth.user) auth.user = { ...auth.user, displayName: saved.displayName, timeZone: saved.timeZone, theme: saved.theme }
+    applySavedPreferences(await updatePreferences(next))
     message.value = '偏好已保存'
   } catch (caught) {
     error.value = isApiRequestError(caught) ? caught.apiError.message : '保存失败，请稍后重试'

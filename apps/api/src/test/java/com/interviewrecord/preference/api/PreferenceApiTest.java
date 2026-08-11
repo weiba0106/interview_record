@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -39,6 +40,22 @@ class PreferenceApiTest {
     @Autowired MockMvc mvc;
     @MockitoBean PreferenceService preferenceService;
     @MockitoBean com.interviewrecord.auth.application.AccountDeletionService accountDeletionService;
+
+    @Test
+    void readsPersistedPreferencesForTheAuthenticatedUser() throws Exception {
+        AuthenticatedUser alice = new AuthenticatedUser(42L, "alice@example.com", "Alice", true,
+                "Asia/Shanghai", Theme.GRAPHITE_CORAL);
+        given(preferenceService.get(42L)).willReturn(new PreferenceDtos.PreferenceResponse(
+                "Alice Tokyo", "Asia/Tokyo", Theme.FOREST_TEAL, java.util.List.of(60, 5), java.util.List.of(10)));
+
+        mvc.perform(get("/api/v1/me/preferences").with(authentication(authenticationFor(alice))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.displayName").value("Alice Tokyo"))
+                .andExpect(jsonPath("$.timeZone").value("Asia/Tokyo"))
+                .andExpect(jsonPath("$.interviewReminderOffsets[0]").value(60))
+                .andExpect(jsonPath("$.interviewReminderOffsets[1]").value(5));
+        verify(preferenceService).get(42L);
+    }
 
     @Test
     void updateUsesAuthenticatedUserInsteadOfAnyRequestUserId() throws Exception {

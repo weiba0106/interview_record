@@ -47,6 +47,11 @@ public class MeController {
     record MeResponse(String id, String email, String displayName, boolean emailVerified, String timeZone, Theme theme) {
     }
 
+    @GetMapping("/preferences")
+    PreferenceDtos.PreferenceResponse preferences() {
+        return preferenceService.get(currentUser.require().id());
+    }
+
     @PatchMapping("/preferences")
     PreferenceDtos.PreferenceResponse updatePreferences(
             @Valid @RequestBody PreferenceDtos.UpdatePreferencesRequest request) {

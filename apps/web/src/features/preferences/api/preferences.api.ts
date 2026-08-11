@@ -9,6 +9,10 @@ export interface Preferences {
   deadlineReminderOffsets: number[]
 }
 
+export async function getPreferences(): Promise<Preferences> {
+  return (await request<Preferences>({ method: 'get', url: '/me/preferences' })).data
+}
+
 export async function updatePreferences(preferences: Preferences): Promise<Preferences> {
   return (await request<Preferences>({ method: 'patch', url: '/me/preferences', data: preferences })).data
 }

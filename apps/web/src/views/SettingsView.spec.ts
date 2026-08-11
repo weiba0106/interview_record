@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
@@ -9,6 +9,9 @@ import { useAuthStore } from '@/shared/auth/auth.store'
 
 describe('SettingsView', () => {
   beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
+  beforeEach(() => server.use(
+    http.get('/api/v1/me/preferences', () => HttpResponse.json({ displayName: '小林', timeZone: 'Asia/Shanghai', theme: 'GRAPHITE_CORAL', interviewReminderOffsets: [1440, 30], deadlineReminderOffsets: [1440] })),
+  ))
   afterEach(() => server.resetHandlers())
   afterAll(() => server.close())
 
@@ -38,6 +41,19 @@ describe('SettingsView', () => {
 
     await vi.waitFor(() => expect(wrapper.text()).toContain('偏好已保存'))
     expect((wrapper.get('input[name="interviewReminderOffsets"]').element as HTMLInputElement).value).toBe('60, 5')
+    expect((wrapper.get('input[name="deadlineReminderOffsets"]').element as HTMLInputElement).value).toBe('10')
+  })
+
+  it('loads persisted reminder offsets when the settings view mounts again', async () => {
+    server.use(
+      http.get('/api/v1/me/preferences', () => HttpResponse.json({ displayName: '小林', timeZone: 'Asia/Shanghai', theme: 'GRAPHITE_CORAL', interviewReminderOffsets: [60, 5], deadlineReminderOffsets: [10] })),
+    )
+    const pinia = createPinia()
+    const auth = useAuthStore(pinia)
+    auth.$patch({ status: 'authenticated', user: { id: '42', email: 'user@example.com', displayName: '旧显示名称', emailVerified: true, timeZone: 'UTC', theme: 'INDIGO' } })
+    const wrapper = mount(SettingsView, { global: { plugins: [pinia, ElementPlus] } })
+
+    await vi.waitFor(() => expect((wrapper.get('input[name="interviewReminderOffsets"]').element as HTMLInputElement).value).toBe('60, 5'))
     expect((wrapper.get('input[name="deadlineReminderOffsets"]').element as HTMLInputElement).value).toBe('10')
   })
 })
