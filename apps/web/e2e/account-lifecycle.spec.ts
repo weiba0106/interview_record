@@ -13,14 +13,24 @@ async function deleteAccount(page: import('@playwright/test').Page, password: st
   await expect(page).toHaveURL(/\/login$/)
 }
 
+async function loginForCleanup(page: import('@playwright/test').Page, email: string, password: string): Promise<void> {
+  await page.goto('/login')
+  await page.getByLabel('邮箱').fill(email)
+  await page.getByLabel('密码').fill(password)
+  await page.getByRole('button', { name: '登录' }).click()
+  await expect(page).toHaveURL(/\/app$/)
+}
+
 test('register, verify, login, update preferences, reset, and delete', async ({ page, browser }) => {
   const email = `e2e-${randomUUID()}@example.test`
   const otherEmail = `e2e-other-${randomUUID()}@example.test`
   let primaryRegistered = false
+  let primaryVerified = false
   let primaryLoggedIn = false
   let primaryDeleted = false
   let primaryPassword = initialPassword
   let otherRegistered = false
+  let otherVerified = false
   let otherLoggedIn = false
   let otherDeleted = false
   let journeyFailed = false
@@ -38,6 +48,7 @@ test('register, verify, login, update preferences, reset, and delete', async ({ 
     const verificationUrl = await waitForCapturedEmailLink(email, 'VERIFY_EMAIL')
     await page.goto(verificationUrl)
     await expect(page.getByText('邮箱验证成功')).toBeVisible()
+    primaryVerified = true
 
     await page.goto('/login')
     await page.getByLabel('邮箱').fill(email)
@@ -92,6 +103,8 @@ test('register, verify, login, update preferences, reset, and delete', async ({ 
     await otherPage.getByRole('button', { name: '注册' }).click()
     otherRegistered = true
     await otherPage.goto(await waitForCapturedEmailLink(otherEmail, 'VERIFY_EMAIL'))
+    await expect(otherPage.getByText('邮箱验证成功')).toBeVisible()
+    otherVerified = true
     await otherPage.goto('/login')
     await otherPage.getByLabel('邮箱').fill(otherEmail)
     await otherPage.getByLabel('密码').fill(initialPassword)
@@ -114,8 +127,12 @@ test('register, verify, login, update preferences, reset, and delete', async ({ 
   } finally {
     const cleanupFailures: Error[] = []
     try {
-      if (otherLoggedIn && !otherDeleted) {
+      if (otherRegistered && otherVerified && !otherDeleted) {
         try {
+          if (!otherLoggedIn) {
+            await loginForCleanup(otherPage, otherEmail, initialPassword)
+            otherLoggedIn = true
+          }
           await deleteAccount(otherPage, initialPassword)
           otherDeleted = true
           otherLoggedIn = false
@@ -131,8 +148,12 @@ test('register, verify, login, update preferences, reset, and delete', async ({ 
       }
     }
 
-    if (primaryLoggedIn && !primaryDeleted) {
+    if (primaryRegistered && primaryVerified && !primaryDeleted) {
       try {
+        if (!primaryLoggedIn) {
+          await loginForCleanup(page, email, primaryPassword)
+          primaryLoggedIn = true
+        }
         await deleteAccount(page, primaryPassword)
         primaryDeleted = true
         primaryLoggedIn = false
@@ -141,10 +162,10 @@ test('register, verify, login, update preferences, reset, and delete', async ({ 
       }
     }
 
-    if ((primaryRegistered && !primaryDeleted) || (otherRegistered && !otherDeleted)) {
+    if ((primaryRegistered && !primaryVerified && !primaryDeleted) || (otherRegistered && !otherVerified && !otherDeleted)) {
       test.info().annotations.push({
         type: 'manual-test-data-cleanup',
-        description: 'A lifecycle failure occurred before an account had an authenticated session, so the production deletion endpoint could not safely remove it.',
+        description: 'A lifecycle failure occurred before email verification, so the production authenticated deletion endpoint could not safely remove the account.',
       })
     }
     if (cleanupFailures.length > 0) {
