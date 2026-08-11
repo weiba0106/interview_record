@@ -1,0 +1,28 @@
+services:
+  mysql:
+    image: mysql:8.4.9
+    environment:
+      MYSQL_DATABASE: interview_record
+      MYSQL_USER: interview_record
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-local-dev-password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-local-root-password}
+      TZ: UTC
+    ports:
+      - "3307:3306"
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-local-root-password}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - interview-record-mysql:/var/lib/mysql
+
+  mailpit:
+    image: axllent/mailpit:v1.30.0
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  interview-record-mysql:

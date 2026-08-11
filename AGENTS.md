@@ -33,15 +33,12 @@
 
 ## 3. 当前工程状态
 
-技术栈已经确定，但应用代码尚未初始化：
+工程基础已初始化：
 
-- 后端使用 Java 21、Spring Boot 4.1.0 和 Maven Wrapper 3.9.16，按业务能力组织模块化单体。
-- 前端使用 Vue 3.5、TypeScript 6、Vite 8.1、Vue Router、Pinia 和 Element Plus。
-- 数据使用 MySQL 8.4 LTS；会话使用 Spring Session JDBC，不在浏览器保存 JWT。
-- 测试使用 JUnit、真实 MySQL、Vitest 和 Playwright；邮件自动化使用仅在 `e2e` 配置启用的受控捕获器。
-- 在用户选择并确认实施方式前，不要擅自初始化框架、生成脚手架或添加依赖。
-- 首次建立工程骨架时，必须在同一变更中更新本文件的“标准命令”和“目录结构”章节。
-- 版本、目录和接口以当前技术与交付基线文档为准；实现中发现不兼容时先更新计划并说明证据。
+- 后端位于 `apps/api`，使用 Java 21、Spring Boot 4.1.0 和 Maven Wrapper 3.9.16。
+- 前端位于 `apps/web`，使用 Vue 3.5、TypeScript 6.0、Vite 8.1、Vue Router、Pinia 和 Element Plus。
+- 本地基础设施定义在根目录 `compose.yaml`，使用 MySQL 8.4.9 和 Mailpit 1.30.0。
+- 数据、会话和后续认证约束仍以当前技术与交付基线文档为准。
 
 ## 4. 不可破坏的产品约束
 
@@ -222,20 +219,38 @@
 
 ## 17. 标准命令与目录结构
 
-仓库当前尚未建立应用代码，因此还没有经过实际验证的安装、开发、测试、构建或迁移命令。计划中的顶层应用目录为 `apps/api` 和 `apps/web`，但在脚手架真正创建并验证前不得把计划命令表述为已经可运行。
+### 已验证命令
 
-首次工程初始化必须在同一变更中补充：
+后端（Windows）：
 
-- 运行时和包管理器版本。
-- 依赖安装命令。
-- 本地开发命令。
-- 单元、集成和端到端测试命令。
-- 格式化、静态检查和类型检查命令。
-- MySQL 启动、迁移、回滚和测试数据库命令。
-- 生产构建与启动命令。
-- 顶层目录职责和模块依赖方向。
+```powershell
+Set-Location apps/api
+.\mvnw.cmd verify
+Set-Location ../..
+```
 
-这些内容必须来自实际可运行的工程配置，并在写入前执行验证。
+后端（POSIX）：`(cd apps/api && ./mvnw verify)`。
+
+前端（Windows）：
+
+```powershell
+Set-Location apps/web
+npm.cmd run test:unit -- --run
+npm.cmd run type-check
+npm.cmd run build
+Set-Location ../..
+```
+
+POSIX 环境使用相同命令并将 `npm.cmd` 替换为 `npm`。
+
+### 目录结构
+
+- `apps/api`：Spring Boot API、资源文件和 JUnit 测试。
+- `apps/web`：Vue SPA、Vitest 单元测试和 Playwright 配置。
+- `.github/workflows`：CI 验证。
+- `docs`：经批准的产品、路线图和实施计划。
+
+Docker Compose 服务尚未在本机验证，因为 Docker 未安装；其定义见根目录 `compose.yaml`。
 
 ## 18. 完成前检查
 
