@@ -82,15 +82,17 @@ class EmailVerificationServiceTest extends MySqlIntegrationTestBase {
     }
 
     @Test
-    void firstResendUsesTheSameAcceptedOutcomeForKnownAndUnknownEmail() {
-        register("known-first-resend@example.com", "127.0.0.31");
+    void cooldownRejectsResendWithoutConsumingTheOriginalToken() {
+        RegistrationResult registration = register("known-first-resend@example.com", "127.0.0.31");
+        String original = mail.verificationMessages().getFirst().rawToken();
 
-        verificationService.resend("known-first-resend@example.com", "127.0.0.31");
-        verificationService.resend("unknown-first-resend@example.com", "127.0.0.32");
+        assertThatThrownBy(() -> verificationService.resend("known-first-resend@example.com", "127.0.0.31"))
+                .isInstanceOf(RateLimitExceededException.class);
 
-        // Registration seeds the private cooldown. The public resend outcome is
-        // still accepted for both addresses, but does not deliver a second mail.
         assertThat(mail.verificationMessages()).hasSize(1);
+        assertThat(tokens.findByUserId(registration.userId())).singleElement()
+                .matches(token -> token.isUsableAt(CLOCK.instant()));
+        verificationService.verify(original);
     }
 
     @Test
@@ -122,11 +124,11 @@ class EmailVerificationServiceTest extends MySqlIntegrationTestBase {
     @Test
     void enforcesCooldownAndPerEmailAndPerIpHourlyCaps() {
         register("email-cap@example.com", "127.0.0.7");
-        verificationService.resend("email-cap@example.com", "127.0.0.7");
-        verificationService.resend("email-cap@example.com", "127.0.0.7");
+        assertThatThrownBy(() -> verificationService.resend("email-cap@example.com", "127.0.0.7"))
+                .isInstanceOf(RateLimitExceededException.class);
 
         CLOCK.set(CLOCK.instant().plusSeconds(61));
-        for (int attempt = 0; attempt < 3; attempt++) {
+        for (int attempt = 0; attempt < 4; attempt++) {
             verificationService.resend("email-cap@example.com", "127.0.0.7");
             CLOCK.set(CLOCK.instant().plusSeconds(61));
         }

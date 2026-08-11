@@ -54,18 +54,18 @@ public class EmailVerificationService {
     @Transactional
     public void resend(String email, String clientIp) {
         String normalizedEmail = normalizeEmail(email);
-        boolean cooldownActive = isCooldownActive(normalizedEmail);
+        rateLimits.check("resend-verification-cooldown", normalizedEmail, 1, Duration.ofMinutes(1), Duration.ofMinutes(1));
         rateLimits.check("resend-verification-email", normalizedEmail, 5, Duration.ofHours(1), Duration.ofHours(1));
         rateLimits.check("resend-verification-ip", requireClientIp(clientIp), 5, Duration.ofHours(1), Duration.ofHours(1));
 
         User user = users.findByEmail(normalizedEmail).orElse(null);
         Instant now = clock.instant();
-        IssuedToken issued = secureTokens.issue(TOKEN_LIFETIME);
         // Keep unknown and verified addresses on the same token/hash and token-query path
         // without creating a token or sending mail for an address that must remain private.
         long tokenOwnerId = user == null ? -1L : user.id();
         tokens.findByUserId(tokenOwnerId).forEach(token -> token.consume(now));
-        if (user == null || user.isVerified() || cooldownActive) return;
+        IssuedToken issued = secureTokens.issue(TOKEN_LIFETIME);
+        if (user == null || user.isVerified()) return;
         tokens.save(new EmailVerificationToken(user, issued.sha256(), issued.expiresAt(), now));
         sendAfterCommit(normalizedEmail, issued.rawValue());
     }
@@ -76,15 +76,6 @@ public class EmailVerificationService {
                 mailDelivery.sendVerificationEmail(email, rawToken);
             }
         });
-    }
-
-    private boolean isCooldownActive(String email) {
-        try {
-            rateLimits.check("resend-verification-cooldown", email, 1, Duration.ofMinutes(1), Duration.ofMinutes(1));
-            return false;
-        } catch (com.interviewrecord.common.error.RateLimitExceededException exception) {
-            return true;
-        }
     }
 
     private InvalidRegistrationException invalidToken() {
