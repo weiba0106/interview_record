@@ -55,6 +55,8 @@ For a new local test schema, the explicit, interactive `scripts/create-test-data
 
 The account lifecycle Playwright test requires the `e2e` API profile, where SMTP is replaced by a local UTF-8 JSONL mailbox. This profile is automation-only and requires `E2E_MAILBOX_PATH`; normal profiles continue to use SMTP. In this workspace the test was exercised as RED but cannot launch because Playwright browser binaries are not installed.
 
+The lifecycle test deletes each user through the authenticated account-deletion flow in `finally`. If a run fails after registration but before a user can verify and log in, there is deliberately no unauthenticated test-cleanup endpoint; that dedicated test database may need its normal reprovisioning process before another shared run.
+
 Run the frontend checks on Windows:
 
 ```powershell

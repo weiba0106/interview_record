@@ -16,11 +16,14 @@ async function deleteAccount(page: import('@playwright/test').Page, password: st
 test('register, verify, login, update preferences, reset, and delete', async ({ page, browser }) => {
   const email = `e2e-${randomUUID()}@example.test`
   const otherEmail = `e2e-other-${randomUUID()}@example.test`
-  let primaryCreated = false
+  let primaryRegistered = false
+  let primaryLoggedIn = false
   let primaryDeleted = false
   let primaryPassword = initialPassword
-  let otherCreated = false
+  let otherRegistered = false
+  let otherLoggedIn = false
   let otherDeleted = false
+  let journeyFailed = false
   const otherContext = await browser.newContext()
   const otherPage = await otherContext.newPage()
 
@@ -30,7 +33,7 @@ test('register, verify, login, update preferences, reset, and delete', async ({ 
     await page.getByLabel('密码').fill(initialPassword)
     await page.getByLabel('显示名称').fill('端到端用户')
     await page.getByRole('button', { name: '注册' }).click()
-    primaryCreated = true
+    primaryRegistered = true
 
     const verificationUrl = await waitForCapturedEmailLink(email, 'VERIFY_EMAIL')
     await page.goto(verificationUrl)
@@ -41,6 +44,7 @@ test('register, verify, login, update preferences, reset, and delete', async ({ 
     await page.getByLabel('密码').fill(initialPassword)
     await page.getByRole('button', { name: '登录' }).click()
     await expect(page).toHaveURL(/\/app$/)
+    primaryLoggedIn = true
 
     await page.getByRole('link', { name: '账号设置' }).click()
     await page.getByLabel('显示名称').fill('已更新用户')
@@ -55,6 +59,7 @@ test('register, verify, login, update preferences, reset, and delete', async ({ 
     await page.goto('/app')
     await page.getByRole('button', { name: '退出登录' }).click()
     await expect(page).toHaveURL(/\/login$/)
+    primaryLoggedIn = false
 
     await page.getByRole('link', { name: '忘记密码？' }).click()
     await page.getByLabel('邮箱').fill(email)
@@ -78,30 +83,74 @@ test('register, verify, login, update preferences, reset, and delete', async ({ 
     await page.getByLabel('密码').fill(replacementPassword)
     await page.getByRole('button', { name: '登录' }).click()
     await expect(page).toHaveURL(/\/app$/)
+    primaryLoggedIn = true
 
     await otherPage.goto('/register')
     await otherPage.getByLabel('邮箱').fill(otherEmail)
     await otherPage.getByLabel('密码').fill(initialPassword)
     await otherPage.getByLabel('显示名称').fill('隔离用户')
     await otherPage.getByRole('button', { name: '注册' }).click()
-    otherCreated = true
+    otherRegistered = true
     await otherPage.goto(await waitForCapturedEmailLink(otherEmail, 'VERIFY_EMAIL'))
     await otherPage.goto('/login')
     await otherPage.getByLabel('邮箱').fill(otherEmail)
     await otherPage.getByLabel('密码').fill(initialPassword)
     await otherPage.getByRole('button', { name: '登录' }).click()
     await expect(otherPage).toHaveURL(/\/app$/)
+    otherLoggedIn = true
     await otherPage.goto('/app/settings')
     await expect(otherPage.getByLabel('显示名称')).toHaveValue('隔离用户')
     await expect(otherPage.getByText('已更新用户')).toHaveCount(0)
     await deleteAccount(otherPage, initialPassword)
     otherDeleted = true
+    otherLoggedIn = false
 
     await deleteAccount(page, replacementPassword)
     primaryDeleted = true
+    primaryLoggedIn = false
+  } catch (error) {
+    journeyFailed = true
+    throw error
   } finally {
-    if (otherCreated && !otherDeleted) await deleteAccount(otherPage, initialPassword)
-    await otherContext.close()
-    if (primaryCreated && !primaryDeleted) await deleteAccount(page, primaryPassword)
+    const cleanupFailures: Error[] = []
+    try {
+      if (otherLoggedIn && !otherDeleted) {
+        try {
+          await deleteAccount(otherPage, initialPassword)
+          otherDeleted = true
+          otherLoggedIn = false
+        } catch (error) {
+          cleanupFailures.push(error instanceof Error ? error : new Error(String(error)))
+        }
+      }
+    } finally {
+      try {
+        await otherContext.close()
+      } catch (error) {
+        cleanupFailures.push(error instanceof Error ? error : new Error(String(error)))
+      }
+    }
+
+    if (primaryLoggedIn && !primaryDeleted) {
+      try {
+        await deleteAccount(page, primaryPassword)
+        primaryDeleted = true
+        primaryLoggedIn = false
+      } catch (error) {
+        cleanupFailures.push(error instanceof Error ? error : new Error(String(error)))
+      }
+    }
+
+    if ((primaryRegistered && !primaryDeleted) || (otherRegistered && !otherDeleted)) {
+      test.info().annotations.push({
+        type: 'manual-test-data-cleanup',
+        description: 'A lifecycle failure occurred before an account had an authenticated session, so the production deletion endpoint could not safely remove it.',
+      })
+    }
+    if (cleanupFailures.length > 0) {
+      const description = `Could not complete ${cleanupFailures.length} authenticated E2E cleanup operation(s).`
+      if (journeyFailed) test.info().annotations.push({ type: 'cleanup-failure', description })
+      else throw new Error(description, { cause: cleanupFailures[0] })
+    }
   }
 })
