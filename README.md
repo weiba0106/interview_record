@@ -9,21 +9,35 @@
 - MySQL 8.4.9 for local infrastructure
 - Vue 3.5.x, TypeScript 6.0.x, and Vite 8.1.x
 
-## Verified commands
+## Backend checks
 
-From the repository root, run the backend check on Windows:
+Run the focused API validation contract on Windows:
 
 ```powershell
 Set-Location apps/api
-.\mvnw.cmd verify
+.\mvnw.cmd -Dtest=GlobalExceptionHandlerTest test
 Set-Location ../..
 ```
 
-On POSIX shells:
+The validation contract itself was verified through the approved host-Maven fallback: 1 test ran with 0 failures and 0 errors. The repaired wrapper reached its pinned Maven 3.9.16 distribution with `mvnw.cmd -version`; this workspace's sandbox then blocked the wrapper test command while it attempted to download the Spring Boot parent from Maven Central. Re-run the command in a network-enabled environment to verify the wrapper path end to end.
 
-```sh
-(cd apps/api && ./mvnw verify)
+Run the real-MySQL Flyway migration check:
+
+```powershell
+Set-Location apps/api
+.\mvnw.cmd -Dtest=MigrationTest test
+Set-Location ../..
 ```
+
+The migration test uses the exact external database variables only when all three are set:
+
+```powershell
+$env:TEST_DB_URL='jdbc:mysql://localhost:3306/interview_record_test?serverTimezone=UTC'
+$env:TEST_DB_USERNAME='interview_record_test'
+$env:TEST_DB_PASSWORD='<dedicated-test-database-password>'
+```
+
+`TEST_DB_URL` must select exactly the `interview_record_test` schema; partial variables and every other schema are rejected before a connection is made. If none of the variables are present, the test starts `mysql:8.4.9` with Testcontainers. Docker or an already-provisioned dedicated external test database is therefore required. Docker and external test-database credentials are unavailable in this workspace, so the real MySQL migration assertion has not been completed here.
 
 Run the frontend checks on Windows:
 

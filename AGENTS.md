@@ -221,15 +221,33 @@
 
 ### 已验证命令
 
-后端（Windows）：
+后端验证错误契约（Windows）：
 
 ```powershell
 Set-Location apps/api
-.\mvnw.cmd verify
+.\mvnw.cmd -Dtest=GlobalExceptionHandlerTest test
 Set-Location ../..
 ```
 
-后端（POSIX）：`(cd apps/api && ./mvnw verify)`。
+验证错误契约本身已通过获准的宿主 Maven 备用路径验证：1 个测试，0 failure、0 error。修复后的 wrapper 已通过 `mvnw.cmd -version` 启动其固定的 Maven 3.9.16；但当前工作区的沙箱在 wrapper 测试命令下载 Spring Boot parent 时阻止网络连接。请在允许访问 Maven Central 的环境中重新运行该命令，完成 wrapper 路径的端到端验证。
+
+后端真实 MySQL 迁移检查（Windows）：
+
+```powershell
+Set-Location apps/api
+.\mvnw.cmd -Dtest=MigrationTest test
+Set-Location ../..
+```
+
+该检查运行 Flyway V1/V2 并断言 `users` 和 `SPRING_SESSION` 表存在。外部数据库模式仅在以下三个环境变量同时提供时启用：
+
+```powershell
+$env:TEST_DB_URL='jdbc:mysql://localhost:3306/interview_record_test?serverTimezone=UTC'
+$env:TEST_DB_USERNAME='interview_record_test'
+$env:TEST_DB_PASSWORD='<专用测试库密码>'
+```
+
+`TEST_DB_URL` 的 schema 必须严格等于 `interview_record_test`；缺少任意变量或指定其他 schema 会在连接前失败。未提供这三个变量时，测试使用 Testcontainers 启动 `mysql:8.4.9`。当前工作区没有 Docker，也没有上述专用测试库凭据，因此真实 MySQL 迁移断言尚未在此处通过；不得以 H2、内存数据库或其他 schema 替代。
 
 前端（Windows）：
 
@@ -249,12 +267,12 @@ POSIX 环境使用相同命令并将 `npm.cmd` 替换为 `npm`。
 - 前端本地开发命令为 `npm.cmd run dev`（POSIX：`npm run dev`）。这是长期运行的开发服务器，不作为完成检查执行。
 - 前端单元测试、类型检查和生产构建使用上方已验证的三个命令；E2E 测试命令为 `npm.cmd run test:e2e`（POSIX：`npm run test:e2e`）。本阶段仅验证 Playwright 用例发现；需要已安装浏览器与本地 Vite 服务才可执行完整浏览器测试。
 - 前端格式化和静态检查脚本为 `npm.cmd run format`、`npm.cmd run lint`（POSIX：将 `npm.cmd` 替换为 `npm`）。两者都会重写文件（`--write`/`--fix`），因此在提交前先检查 Git 差异。
-- 后端依赖由 `apps/api/mvnw.cmd` 自动解析；本阶段仅有上下文单元测试，尚未建立 MySQL 集成测试、迁移、回滚或应用启动配置。后续任务建立这些功能后，必须补充并验证对应命令。
+- 后端依赖由 `apps/api/mvnw.cmd` 自动解析。Flyway 是唯一的 schema 管理者；迁移通过 `MigrationTest` 执行，不提供手工 SQL 或自动回滚命令。需要回退已应用迁移时，先取得用户对精确目标、备份和恢复方式的确认，再编写新的版本化补偿迁移并通过同一真实 MySQL 路径验证。
 
 ### MySQL 与外部测试路径
 
-- Docker 未安装，故 `docker compose up -d mysql mailpit`、`docker compose down` 和 Compose MySQL 启动未在本机验证，当前不可用。
-- 外部测试数据库路径已在 `.env.example` 定义：仅当 `TEST_DB_URL`、`TEST_DB_USERNAME` 和 `TEST_DB_PASSWORD` 全部指向 `interview_record_test` 时，后续 MySQL 集成测试才可运行。当前阶段尚未提供测试数据库创建、迁移或回滚命令。
+- Docker 未安装，故 `docker compose up -d mysql mailpit`、`docker compose down` 和 Compose MySQL 启动未在本机验证，当前不可用。没有外部变量时，MySQL 集成/API 测试将因 Testcontainers 无法连接 Docker 而失败，这是预期的明确阻塞，不能跳过或改用内存数据库。
+- 外部测试数据库路径已在 `.env.example` 定义。仅当 `TEST_DB_URL`、`TEST_DB_USERNAME` 和 `TEST_DB_PASSWORD` 同时指向现有且专用的 `interview_record_test` schema 时，MySQL 集成/API 测试才能在无 Docker 环境运行；不要在自动化中创建、删除、截断或改用其他数据库。
 
 ### 目录结构
 
