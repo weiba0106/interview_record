@@ -12,7 +12,8 @@ public record AuthenticatedUser(
         String displayName,
         boolean emailVerified,
         String timeZone,
-        Theme theme) implements java.security.Principal {
+        Theme theme) implements java.security.Principal, java.io.Serializable {
+    private static final long serialVersionUID = 1L;
     @Override
     public String getName() {
         return email;

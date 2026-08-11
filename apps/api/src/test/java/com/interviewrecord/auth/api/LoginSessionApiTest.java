@@ -22,6 +22,7 @@ import com.interviewrecord.common.security.CurrentUser;
 import com.interviewrecord.common.security.JsonAccessDeniedHandler;
 import com.interviewrecord.common.security.JsonAuthenticationEntryPoint;
 import com.interviewrecord.preference.api.MeController;
+import com.interviewrecord.preference.api.PreferenceDtos;
 import com.interviewrecord.preference.domain.Theme;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,6 +56,8 @@ class LoginSessionApiTest {
     @Test
     void verifiedUserLogsInAndSessionCanReadCurrentUser() throws Exception {
         given(authService.login(any(), any(), any())).willReturn(VERIFIED_USER);
+        given(preferenceService.get(42L)).willReturn(new PreferenceDtos.PreferenceResponse(
+                VERIFIED_USER.displayName(), VERIFIED_USER.timeZone(), VERIFIED_USER.theme(), java.util.List.of(), java.util.List.of()));
 
         MvcResult login = mvc.perform(post("/api/v1/auth/login").with(csrf()).contentType(APPLICATION_JSON)
                         .content("{\"email\":\"user@example.com\",\"password\":\"Password123\"}"))
@@ -145,6 +148,8 @@ class LoginSessionApiTest {
     void currentUserIsAlwaysReadFromAuthenticatedSession() throws Exception {
         AuthenticatedUser otherUser = new AuthenticatedUser(
                 84L, "other@example.com", "小周", true, "UTC", Theme.FOREST_TEAL);
+        given(preferenceService.get(84L)).willReturn(new PreferenceDtos.PreferenceResponse(
+                otherUser.displayName(), otherUser.timeZone(), otherUser.theme(), java.util.List.of(), java.util.List.of()));
 
         mvc.perform(get("/api/v1/me").with(authentication(authenticationFor(otherUser))))
                 .andExpect(status().isOk())

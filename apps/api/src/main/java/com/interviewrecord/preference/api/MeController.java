@@ -40,8 +40,9 @@ public class MeController {
     @GetMapping
     MeResponse me() {
         AuthenticatedUser user = currentUser.require();
-        return new MeResponse(Long.toString(user.id()), user.email(), user.displayName(), user.emailVerified(),
-                user.timeZone(), user.theme());
+        PreferenceDtos.PreferenceResponse preference = preferenceService.get(user.id());
+        return new MeResponse(Long.toString(user.id()), user.email(), preference.displayName(), user.emailVerified(),
+                preference.timeZone(), preference.theme());
     }
 
     record MeResponse(String id, String email, String displayName, boolean emailVerified, String timeZone, Theme theme) {
@@ -62,15 +63,19 @@ public class MeController {
     @org.springframework.web.bind.annotation.ResponseStatus(HttpStatus.NO_CONTENT)
     void deleteAccount(@Valid @RequestBody AuthDtos.DeleteAccountRequest request, HttpServletRequest requestContext,
             HttpServletResponse response) {
-        accountDeletionService.deleteCurrentUser(currentUser.require().id(), request.password());
-        var session = requestContext.getSession(false);
-        if (session != null) session.invalidate();
-        var cookie = new jakarta.servlet.http.Cookie("INTERVIEW_RECORD_SESSION", "");
-        cookie.setPath("/");
-        cookie.setHttpOnly(true);
-        cookie.setSecure(secureSessionCookie);
-        cookie.setAttribute("SameSite", "Lax");
-        cookie.setMaxAge(0);
-        response.addCookie(cookie);
+        boolean deleted = false;
+        try {
+            accountDeletionService.deleteCurrentUser(currentUser.require().id(), request.password());
+            deleted = true;
+        } finally {
+            if (deleted) {
+                var session = requestContext.getSession(false);
+                if (session != null) session.invalidate();
+                var cookie = new jakarta.servlet.http.Cookie("INTERVIEW_RECORD_SESSION", "");
+                cookie.setPath("/"); cookie.setHttpOnly(true); cookie.setSecure(secureSessionCookie);
+                cookie.setAttribute("SameSite", "Lax"); cookie.setMaxAge(0);
+                response.addCookie(cookie);
+            }
+        }
     }
 }

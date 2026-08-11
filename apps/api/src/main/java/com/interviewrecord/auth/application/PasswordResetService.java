@@ -66,11 +66,11 @@ public class PasswordResetService {
         // Lock the stable user row before invalidating and issuing tokens. Token rows alone
         // cannot serialize two first-time reset requests because there may be no token yet.
         User user = users.findByEmailForUpdate(normalizedEmail).orElse(null);
-        if (user == null || !user.isVerified()) return;
-
         Instant now = clock.instant();
-        tokens.findByUserId(user.id()).forEach(token -> token.consume(now));
         IssuedToken issued = secureTokens.issue(TOKEN_LIFETIME);
+        long tokenOwnerId = user == null ? -1L : user.id();
+        tokens.findByUserId(tokenOwnerId).forEach(token -> token.consume(now));
+        if (user == null || !user.isVerified()) return;
         tokens.save(new PasswordResetToken(user, issued.sha256(), issued.expiresAt(), now));
         sendAfterCommit(normalizedEmail, issued.rawValue());
     }

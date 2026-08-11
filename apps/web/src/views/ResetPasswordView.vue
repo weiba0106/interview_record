@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import ResetPasswordForm from '@/features/auth/components/ResetPasswordForm.vue'
 
 const route = useRoute()
-const token = computed(() => typeof route.query.token === 'string' ? route.query.token : '')
+const token = ref(typeof route.query.token === 'string' ? route.query.token : '')
 const reset = ref(false)
+onMounted(() => { if (token.value) window.history.replaceState(null, '', route.path) })
 </script>
 
 <template>

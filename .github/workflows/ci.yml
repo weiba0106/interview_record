@@ -52,6 +52,7 @@ jobs:
         run: |
           set -euo pipefail
           mailbox="$GITHUB_WORKSPACE/apps/api/target/e2e-mailbox/messages.jsonl"
+          export E2E_MAILBOX_PATH="$mailbox"
           mkdir -p "$(dirname "$mailbox")"
           trap 'kill "${api_pid:-}" "${web_pid:-}" 2>/dev/null || true; rm -f "$mailbox"' EXIT
           (cd apps/api && E2E_MAILBOX_PATH="$mailbox" DB_URL="$TEST_DB_URL" DB_USERNAME="$TEST_DB_USERNAME" DB_PASSWORD="$TEST_DB_PASSWORD" \

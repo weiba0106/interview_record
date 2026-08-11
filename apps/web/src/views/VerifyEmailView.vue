@@ -11,6 +11,7 @@ const message = ref('正在验证邮箱…')
 onMounted(async () => {
   const token = typeof route.query.token === 'string' ? route.query.token : ''
   if (!token) { state.value = 'error'; message.value = '验证链接无效或已失效'; return }
+  window.history.replaceState(null, '', route.path)
   try { await verifyEmail(token); state.value = 'success'; message.value = '邮箱验证成功' }
   catch (error) { state.value = 'error'; message.value = isApiRequestError(error) ? error.apiError.message : '验证失败，请稍后重试' }
 })

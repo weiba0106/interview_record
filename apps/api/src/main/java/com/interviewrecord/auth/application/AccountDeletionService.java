@@ -10,10 +10,13 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 @ConditionalOnExpression("'${spring.datasource.url:}' != ''")
 public class AccountDeletionService {
+    private static final Logger log = LoggerFactory.getLogger(AccountDeletionService.class);
     private final JpaUserRepository users;
     private final PasswordEncoder passwordEncoder;
     private final SpringSessionRevoker sessionRevoker;
@@ -36,7 +39,12 @@ public class AccountDeletionService {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                sessionRevoker.revokeAllForPrincipal(email);
+                try {
+                    sessionRevoker.revokeAllForPrincipal(email);
+                } catch (RuntimeException exception) {
+                    log.atWarn().addKeyValue("error_code", "SESSION_REVOCATION_FAILED")
+                            .log("session_revocation_failed");
+                }
             }
         });
     }

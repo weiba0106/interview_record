@@ -4,9 +4,13 @@ import com.interviewrecord.common.security.JsonAccessDeniedHandler;
 import com.interviewrecord.common.security.JsonAuthenticationEntryPoint;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 import com.interviewrecord.auth.domain.User;
 import com.interviewrecord.auth.infrastructure.JpaUserRepository;
@@ -20,6 +24,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
+@EnableWebSecurity
 public class SecurityConfig {
     @Bean
     CsrfTokenRepository csrfTokenRepository() {
@@ -53,9 +58,14 @@ public class SecurityConfig {
     }
 
     @Bean
+    @Order(Ordered.HIGHEST_PRECEDENCE)
     SecurityFilterChain securityFilterChain(HttpSecurity http, JsonAuthenticationEntryPoint entryPoint,
             JsonAccessDeniedHandler accessDeniedHandler, CsrfTokenRepository csrfTokenRepository) throws Exception {
-        http.csrf(configurer -> configurer.csrfTokenRepository(csrfTokenRepository))
+        // Axios returns the raw value from the readable XSRF-TOKEN cookie. The
+        // default XOR handler only accepts a masked request value, so use the
+        // plain request-attribute handler for this SPA-only API.
+        http.csrf(configurer -> configurer.csrfTokenRepository(csrfTokenRepository)
+                .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/verify-email",
                                 "/api/v1/auth/resend-verification", "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password",

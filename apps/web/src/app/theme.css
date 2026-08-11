@@ -1,0 +1,12 @@
+:root {
+  --ir-bg: #24262d;
+  --ir-surface: #30323b;
+  --ir-text: #f5f3f0;
+  --ir-muted: #c8c1bc;
+  --ir-primary: #e46f61;
+  --ir-primary-contrast: #251f20;
+  --el-color-primary: var(--ir-primary);
+  --el-bg-color: var(--ir-surface);
+  --el-text-color-primary: var(--ir-text);
+  --el-text-color-regular: var(--ir-muted);
+}

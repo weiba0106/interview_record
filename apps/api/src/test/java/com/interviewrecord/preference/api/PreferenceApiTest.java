@@ -42,6 +42,21 @@ class PreferenceApiTest {
     @MockitoBean com.interviewrecord.auth.application.AccountDeletionService accountDeletionService;
 
     @Test
+    void meReadsCurrentPersistedPreferencesRatherThanTheSessionSnapshot() throws Exception {
+        AuthenticatedUser alice = new AuthenticatedUser(42L, "alice@example.com", "Old display name", true,
+                "Asia/Shanghai", Theme.GRAPHITE_CORAL);
+        given(preferenceService.get(42L)).willReturn(new PreferenceDtos.PreferenceResponse(
+                "Alice Tokyo", "Asia/Tokyo", Theme.FOREST_TEAL, java.util.List.of(60), java.util.List.of(10)));
+
+        mvc.perform(get("/api/v1/me").with(authentication(authenticationFor(alice))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.displayName").value("Alice Tokyo"))
+                .andExpect(jsonPath("$.timeZone").value("Asia/Tokyo"))
+                .andExpect(jsonPath("$.theme").value("FOREST_TEAL"));
+        verify(preferenceService).get(42L);
+    }
+
+    @Test
     void readsPersistedPreferencesForTheAuthenticatedUser() throws Exception {
         AuthenticatedUser alice = new AuthenticatedUser(42L, "alice@example.com", "Alice", true,
                 "Asia/Shanghai", Theme.GRAPHITE_CORAL);

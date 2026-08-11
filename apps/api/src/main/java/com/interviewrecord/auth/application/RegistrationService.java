@@ -56,6 +56,8 @@ public class RegistrationService {
         Instant now = clock.instant();
         User user = users.saveAndFlush(new User(email, passwordEncoder.encode(command.password()), normalizeDisplayName(command.displayName()), now));
         defaults.createFor(user, command.timeZone(), now);
+        // The initial delivery counts as a resend for the same public cooldown.
+        rateLimits.check("resend-verification-cooldown", email, 1, Duration.ofMinutes(1), Duration.ofMinutes(1));
         IssuedToken issued = secureTokens.issue(Duration.ofHours(24));
         verificationTokens.save(new EmailVerificationToken(user, issued.sha256(), issued.expiresAt(), now));
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
