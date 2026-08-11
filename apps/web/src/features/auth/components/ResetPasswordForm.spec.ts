@@ -25,4 +25,19 @@ describe('ResetPasswordForm', () => {
     expect((wrapper.get('input[name="newPassword"]').element as HTMLInputElement).value).toBe('')
     expect((wrapper.get('input[name="confirmPassword"]').element as HTMLInputElement).value).toBe('')
   })
+
+  it('associates password field errors returned by the server', async () => {
+    server.use(
+      http.get('/api/v1/auth/csrf', () => new HttpResponse(null, { status: 204 })),
+      http.post('/api/v1/auth/reset-password', () => HttpResponse.json({ code: 'VALIDATION_FAILED', message: '请检查输入', fieldErrors: { newPassword: '密码不符合要求' } }, { status: 400 })),
+    )
+    const wrapper = mount(ResetPasswordForm, { props: { token: 'opaque-token' }, global: { plugins: [ElementPlus] } })
+
+    await wrapper.get('input[name="newPassword"]').setValue('weak')
+    await wrapper.get('input[name="confirmPassword"]').setValue('weak')
+    await wrapper.get('form').trigger('submit.prevent')
+
+    await vi.waitFor(() => expect(wrapper.get('[data-field-error="newPassword"]').text()).toBe('密码不符合要求'))
+    expect(wrapper.get('input[name="newPassword"]').attributes('aria-describedby')).toBe('reset-password-error')
+  })
 })

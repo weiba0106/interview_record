@@ -28,11 +28,11 @@ async function submit() {
     <ElInput id="register-email" v-model="form.email" name="email" type="email" autocomplete="email" :aria-describedby="fieldErrors.email ? 'register-email-error' : undefined" />
     <p v-if="fieldErrors.email" id="register-email-error" data-field-error="email" role="alert">{{ fieldErrors.email }}</p>
     <label for="register-password">密码</label>
-    <ElInput id="register-password" v-model="form.password" name="password" type="password" autocomplete="new-password" show-password />
-    <p v-if="fieldErrors.password" data-field-error="password" role="alert">{{ fieldErrors.password }}</p>
+    <ElInput id="register-password" v-model="form.password" name="password" type="password" autocomplete="new-password" show-password :aria-describedby="fieldErrors.password ? 'register-password-error' : undefined" />
+    <p v-if="fieldErrors.password" id="register-password-error" data-field-error="password" role="alert">{{ fieldErrors.password }}</p>
     <label for="register-display-name">显示名称</label>
-    <ElInput id="register-display-name" v-model="form.displayName" name="displayName" autocomplete="name" />
-    <p v-if="fieldErrors.displayName" data-field-error="displayName" role="alert">{{ fieldErrors.displayName }}</p>
+    <ElInput id="register-display-name" v-model="form.displayName" name="displayName" autocomplete="name" :aria-describedby="fieldErrors.displayName ? 'register-display-name-error' : undefined" />
+    <p v-if="fieldErrors.displayName" id="register-display-name-error" data-field-error="displayName" role="alert">{{ fieldErrors.displayName }}</p>
     <ElButton native-type="submit" type="primary" :loading="pending" :disabled="pending">注册</ElButton>
   </form>
 </template>

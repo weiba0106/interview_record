@@ -9,7 +9,7 @@ import ResetPasswordView from '@/views/ResetPasswordView.vue'
 import VerifyEmailView from '@/views/VerifyEmailView.vue'
 
 export function resolveGuard(to: Pick<RouteLocationNormalizedLoaded, 'meta'>, auth: Pick<{ status: AuthStatus }, 'status'>) {
-  if (to.meta.requiresAuth && auth.status === 'guest') return { name: 'login' }
+  if (to.meta.requiresAuth && auth.status !== 'authenticated') return { name: 'login' }
   if (to.meta.guestOnly && auth.status === 'authenticated') return { name: 'app' }
   return undefined
 }

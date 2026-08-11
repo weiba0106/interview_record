@@ -9,6 +9,12 @@ describe('authentication route guard', () => {
     expect(resolveGuard(protectedRoute, { status: 'guest' })).toEqual({ name: 'login' })
   })
 
+  it('does not allow an unresolved current-user request to render a protected route', () => {
+    const protectedRoute = { meta: { requiresAuth: true } } as Pick<RouteLocationNormalizedLoaded, 'meta'>
+
+    expect(resolveGuard(protectedRoute, { status: 'unknown' })).toEqual({ name: 'login' })
+  })
+
   it('does not redirect guests from public routes', () => {
     const publicRoute = { meta: {} } as Pick<RouteLocationNormalizedLoaded, 'meta'>
 

@@ -13,7 +13,7 @@ describe('RegisterForm', () => {
   it('shows email field errors returned by the server', async () => {
     server.use(
       http.get('/api/v1/auth/csrf', () => new HttpResponse(null, { status: 204 })),
-      http.post('/api/v1/auth/register', () => HttpResponse.json({ code: 'VALIDATION_FAILED', message: '请检查输入', fieldErrors: { email: '邮箱格式不正确' } }, { status: 400 })),
+      http.post('/api/v1/auth/register', () => HttpResponse.json({ code: 'VALIDATION_FAILED', message: '请检查输入', fieldErrors: { email: '邮箱格式不正确', password: '密码不符合要求', displayName: '显示名称不能为空' } }, { status: 400 })),
     )
     const wrapper = mount(RegisterForm, { global: { plugins: [ElementPlus] } })
 
@@ -23,5 +23,10 @@ describe('RegisterForm', () => {
     await wrapper.get('form').trigger('submit.prevent')
 
     await vi.waitFor(() => expect(wrapper.get('[data-field-error="email"]').text()).toBe('邮箱格式不正确'))
+    expect(wrapper.get('[data-field-error="password"]').text()).toBe('密码不符合要求')
+    expect(wrapper.get('[data-field-error="displayName"]').text()).toBe('显示名称不能为空')
+    expect(wrapper.get('input[name="email"]').attributes('aria-describedby')).toBe('register-email-error')
+    expect(wrapper.get('input[name="password"]').attributes('aria-describedby')).toBe('register-password-error')
+    expect(wrapper.get('input[name="displayName"]').attributes('aria-describedby')).toBe('register-display-name-error')
   })
 })
