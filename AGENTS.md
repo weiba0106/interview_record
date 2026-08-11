@@ -221,6 +221,16 @@
 
 ### 已验证命令
 
+完整 Phase 1 门禁（Windows，要求已有专用 `interview_record_test`、全部 `TEST_DB_*` 凭据、`mysql` 客户端和 Playwright 浏览器）：
+
+```powershell
+.\scripts\verify-phase-1.ps1
+```
+
+该脚本只接受精确的 `interview_record_test` schema；它不会创建、删除或截断数据库，只会清理自己创建的 API/Vite 子进程和 E2E 捕获邮箱。新建本地测试 schema 必须显式运行 `scripts/create-test-database.ps1`，其仅以 `-WhatIf` 可预览、仅能创建该固定名称且不执行 drop/truncate/grant。
+
+E2E 邮件捕获仅在 `e2e` profile 启用，并强制要求 `E2E_MAILBOX_PATH`；常规及生产 profile 继续使用 SMTP，不能将捕获邮箱用于非自动化环境。
+
 后端验证错误契约（Windows）：
 
 ```powershell

@@ -45,3 +45,22 @@ jobs:
         working-directory: apps/web
       - run: npm run build
         working-directory: apps/web
+      - run: npm exec playwright install --with-deps chromium
+        working-directory: apps/web
+      - name: Verify the complete account lifecycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          mailbox="$GITHUB_WORKSPACE/apps/api/target/e2e-mailbox/messages.jsonl"
+          mkdir -p "$(dirname "$mailbox")"
+          trap 'kill "${api_pid:-}" "${web_pid:-}" 2>/dev/null || true; rm -f "$mailbox"' EXIT
+          (cd apps/api && E2E_MAILBOX_PATH="$mailbox" DB_URL="$TEST_DB_URL" DB_USERNAME="$TEST_DB_USERNAME" DB_PASSWORD="$TEST_DB_PASSWORD" \
+            ./mvnw -Dspring-boot.run.profiles=e2e spring-boot:run) > "$RUNNER_TEMP/interview-record-api.log" 2>&1 &
+          api_pid=$!
+          (cd apps/web && npm run dev -- --host 127.0.0.1) > "$RUNNER_TEMP/interview-record-web.log" 2>&1 &
+          web_pid=$!
+          for attempt in {1..90}; do curl --fail --silent http://localhost:8080/actuator/health >/dev/null && break; sleep 1; done
+          curl --fail --silent http://localhost:8080/actuator/health >/dev/null
+          for attempt in {1..45}; do curl --fail --silent http://localhost:5173 >/dev/null && break; sleep 1; done
+          curl --fail --silent http://localhost:5173 >/dev/null
+          (cd apps/web && E2E_EXTERNAL_SERVERS=true PLAYWRIGHT_BASE_URL=http://localhost:5173 npm run test:e2e -- account-lifecycle.spec.ts)

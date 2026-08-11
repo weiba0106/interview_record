@@ -3,12 +3,14 @@ package com.interviewrecord.mail.infrastructure;
 import com.interviewrecord.mail.application.MailGateway;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import org.springframework.context.annotation.Profile;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
 
 @Component
+@Profile("!e2e")
 public class SmtpMailGateway implements MailGateway {
     private final JavaMailSender sender;
     private final String frontendBaseUrl;

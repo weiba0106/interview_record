@@ -39,6 +39,22 @@ $env:TEST_DB_PASSWORD='<dedicated-test-database-password>'
 
 `TEST_DB_URL` must select exactly the `interview_record_test` schema; partial variables and every other schema are rejected before a connection is made. If none of the variables are present, the test starts `mysql:8.4.9` with Testcontainers. Docker or an already-provisioned dedicated external test database is therefore required. Docker and external test-database credentials are unavailable in this workspace, so the real MySQL migration assertion has not been completed here.
 
+## Complete Phase 1 verification
+
+Use only an existing dedicated `interview_record_test` database, all three `TEST_DB_*` variables above, the MySQL client on `PATH`, and installed Playwright browsers. The command checks the exact schema before connecting, never creates, drops, or truncates a database, runs backend/frontend checks, starts profile-limited E2E services, and cleans up only its own child processes and captured mailbox.
+
+```powershell
+.\scripts\verify-phase-1.ps1
+```
+
+For a new local test schema, the explicit, interactive `scripts/create-test-database.ps1` command can create only `interview_record_test`; it never drops, truncates, or grants access. It requires an administrator user/password and honours PowerShell `-WhatIf`.
+
+```powershell
+.\scripts\create-test-database.ps1 -AdminUser root -AdminPassword (Read-Host -AsSecureString)
+```
+
+The account lifecycle Playwright test requires the `e2e` API profile, where SMTP is replaced by a local UTF-8 JSONL mailbox. This profile is automation-only and requires `E2E_MAILBOX_PATH`; normal profiles continue to use SMTP. In this workspace the test was exercised as RED but cannot launch because Playwright browser binaries are not installed.
+
 Run the frontend checks on Windows:
 
 ```powershell
