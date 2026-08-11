@@ -130,7 +130,7 @@ Expected: FAIL because `apps/api/pom.xml` and `InterviewRecordApplication` do no
 
 - [ ] **Step 3: Create the Spring Boot POM and application entry point**
 
-`apps/api/pom.xml` must use this dependency set; let the Spring Boot parent manage transitive versions:
+`apps/api/pom.xml` must use this dependency set; let the Spring Boot parent manage its dependencies and import the official Testcontainers BOM `2.0.5` because Spring Boot does not manage the Testcontainers modules:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -151,6 +151,17 @@ Expected: FAIL because `apps/api/pom.xml` and `InterviewRecordApplication` do no
         <java.version>21</java.version>
         <maven.compiler.release>21</maven.compiler.release>
     </properties>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>2.0.5</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -201,12 +212,12 @@ Expected: FAIL because `apps/api/pom.xml` and `InterviewRecordApplication` do no
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>mysql</artifactId>
+            <artifactId>testcontainers-mysql</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>junit-jupiter</artifactId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
