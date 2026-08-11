@@ -221,7 +221,7 @@
 
 ### 已验证命令
 
-完整 Phase 1 门禁（Windows，要求已有专用 `interview_record_test`、全部 `TEST_DB_*` 凭据、`mysql` 客户端和 Playwright 浏览器）：
+完整 Phase 1 门禁（Windows；本工作区因缺少专用测试库凭据与 Playwright 浏览器而尚未完成验证。运行要求已有专用 `interview_record_test`、全部 `TEST_DB_*` 凭据、`mysql` 客户端和 Playwright 浏览器）：
 
 ```powershell
 .\scripts\verify-phase-1.ps1

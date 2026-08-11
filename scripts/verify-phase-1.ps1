@@ -28,13 +28,14 @@ function Require-ExactTestDatabase {
 
 function Confirm-MySqlConnection([uri]$connectionUri) {
     $mysql = Get-Command mysql -ErrorAction Stop
+    $port = if ($connectionUri.IsDefaultPort -or $connectionUri.Port -lt 1) { 3306 } else { $connectionUri.Port }
     $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
     $startInfo.FileName = $mysql.Source
     $startInfo.UseShellExecute = $false
     $startInfo.CreateNoWindow = $true
     $startInfo.RedirectStandardOutput = $true
     $startInfo.RedirectStandardError = $true
-    foreach ($argument in @('--protocol=tcp', "--host=$($connectionUri.Host)", "--port=$($connectionUri.Port)", "--user=$env:TEST_DB_USERNAME", '--database=interview_record_test', '--batch', '--skip-column-names', '--execute=SELECT DATABASE()')) {
+    foreach ($argument in @('--protocol=tcp', "--host=$($connectionUri.Host)", "--port=$port", "--user=$env:TEST_DB_USERNAME", '--database=interview_record_test', '--batch', '--skip-column-names', '--execute=SELECT DATABASE()')) {
         [void]$startInfo.ArgumentList.Add($argument)
     }
     $startInfo.Environment['MYSQL_PWD'] = $env:TEST_DB_PASSWORD
