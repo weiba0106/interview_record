@@ -4,12 +4,16 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.interviewrecord.auth.application.RegistrationResult;
 import com.interviewrecord.auth.application.RegistrationService;
+import com.interviewrecord.common.error.EmailAlreadyRegisteredException;
+import com.interviewrecord.common.error.InvalidRegistrationException;
+import com.interviewrecord.common.error.RateLimitExceededException;
 import com.interviewrecord.common.config.SecurityConfig;
 import com.interviewrecord.common.error.GlobalExceptionHandler;
 import com.interviewrecord.common.security.JsonAccessDeniedHandler;
@@ -50,5 +54,44 @@ class RegistrationApiTest {
                         .content("{\"email\":\"user@example.com\",\"password\":\"Password123\",\"displayName\":\"小林\"}"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("INVALID_CSRF_TOKEN"));
+    }
+
+    @Test
+    void materializesPublicCsrfTokenWithoutCreatingAuthenticatedSession() throws Exception {
+        mvc.perform(get("/api/v1/auth/csrf"))
+                .andExpect(status().isNoContent())
+                .andExpect(result -> org.assertj.core.api.Assertions.assertThat(result.getResponse().getCookie("XSRF-TOKEN")).isNotNull())
+                .andExpect(result -> org.assertj.core.api.Assertions.assertThat(result.getRequest().getSession(false)).isNull());
+    }
+
+    @Test
+    void mapsDuplicateEmailToConflict() throws Exception {
+        given(registrationService.register(any())).willThrow(new EmailAlreadyRegisteredException());
+
+        mvc.perform(post("/api/v1/auth/register").with(csrf()).contentType(APPLICATION_JSON)
+                        .content("{\"email\":\"user@example.com\",\"password\":\"Password123\",\"displayName\":\"小林\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("EMAIL_ALREADY_REGISTERED"));
+    }
+
+    @Test
+    void mapsRateLimitToTooManyRequestsWithRetryAfter() throws Exception {
+        given(registrationService.register(any())).willThrow(new RateLimitExceededException(java.time.Duration.ofMinutes(10)));
+
+        mvc.perform(post("/api/v1/auth/register").with(csrf()).contentType(APPLICATION_JSON)
+                        .content("{\"email\":\"user@example.com\",\"password\":\"Password123\",\"displayName\":\"小林\"}"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.code").value("RATE_LIMITED"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Retry-After", "600"));
+    }
+
+    @Test
+    void mapsCreationPolicyViolationToValidationError() throws Exception {
+        given(registrationService.register(any())).willThrow(new InvalidRegistrationException("INVALID_PASSWORD"));
+
+        mvc.perform(post("/api/v1/auth/register").with(csrf()).contentType(APPLICATION_JSON)
+                        .content("{\"email\":\"user@example.com\",\"password\":\"Password123\",\"displayName\":\"小林\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_PASSWORD"));
     }
 }

@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.interviewrecord.auth.domain.User;
+import com.interviewrecord.common.error.EmailAlreadyRegisteredException;
+import com.interviewrecord.common.error.InvalidRegistrationException;
 import com.interviewrecord.auth.infrastructure.JpaEmailVerificationTokenRepository;
 import com.interviewrecord.auth.infrastructure.JpaUserRepository;
 import com.interviewrecord.defaults.infrastructure.JpaJobTypeRepository;
@@ -53,7 +55,7 @@ class RegistrationServiceTest extends MySqlIntegrationTestBase {
 
         assertThatThrownBy(() -> registrationService.register(
                 new RegisterCommand("USER@example.com", "Password123", "小王", null, "127.0.0.2")))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(EmailAlreadyRegisteredException.class)
                 .hasMessage("EMAIL_ALREADY_REGISTERED");
     }
 
@@ -68,13 +70,13 @@ class RegistrationServiceTest extends MySqlIntegrationTestBase {
     @Test
     void registrationRejectsPasswordsOutsideCreationPolicy() {
         assertThatThrownBy(() -> registrationService.register(new RegisterCommand(
-                "short@example.com", "Pass123", "小林", null, "127.0.0.1"))).isInstanceOf(IllegalArgumentException.class);
+                "short@example.com", "Pass123", "小林", null, "127.0.0.1"))).isInstanceOf(InvalidRegistrationException.class);
         assertThatThrownBy(() -> registrationService.register(new RegisterCommand(
-                "letters@example.com", "PasswordOnly", "小林", null, "127.0.0.2"))).isInstanceOf(IllegalArgumentException.class);
+                "letters@example.com", "PasswordOnly", "小林", null, "127.0.0.2"))).isInstanceOf(InvalidRegistrationException.class);
         assertThatThrownBy(() -> registrationService.register(new RegisterCommand(
-                "digits@example.com", "12345678", "小林", null, "127.0.0.3"))).isInstanceOf(IllegalArgumentException.class);
+                "digits@example.com", "12345678", "小林", null, "127.0.0.3"))).isInstanceOf(InvalidRegistrationException.class);
         assertThatThrownBy(() -> registrationService.register(new RegisterCommand(
-                "bytes@example.com", "a".repeat(73) + "1", "小林", null, "127.0.0.4"))).isInstanceOf(IllegalArgumentException.class);
+                "bytes@example.com", "a".repeat(73) + "1", "小林", null, "127.0.0.4"))).isInstanceOf(InvalidRegistrationException.class);
     }
 
     @Test

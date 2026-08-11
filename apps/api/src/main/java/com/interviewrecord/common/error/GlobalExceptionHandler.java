@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import org.slf4j.MDC;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
@@ -54,6 +55,23 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     ResponseEntity<ApiError> handleConflict(DataIntegrityViolationException exception) {
         return response(HttpStatus.CONFLICT, "CONFLICT", "资源状态冲突", Map.of());
+    }
+
+    @ExceptionHandler(EmailAlreadyRegisteredException.class)
+    ResponseEntity<ApiError> handleEmailAlreadyRegistered(EmailAlreadyRegisteredException exception) {
+        return response(HttpStatus.CONFLICT, "EMAIL_ALREADY_REGISTERED", "邮箱已注册", Map.of());
+    }
+
+    @ExceptionHandler(InvalidRegistrationException.class)
+    ResponseEntity<ApiError> handleInvalidRegistration(InvalidRegistrationException exception) {
+        return response(HttpStatus.BAD_REQUEST, exception.getMessage(), "请求参数有误", Map.of());
+    }
+
+    @ExceptionHandler(RateLimitExceededException.class)
+    ResponseEntity<ApiError> handleRateLimit(RateLimitExceededException exception) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, Long.toString(Math.max(1, exception.retryAfter().toSeconds())))
+                .body(new ApiError("RATE_LIMITED", "请求过于频繁", Map.of(), MDC.get("traceId")));
     }
 
     @ExceptionHandler(Exception.class)

@@ -20,6 +20,11 @@ public class JpaRateLimitBucketRepository {
                 result -> result.next() ? Optional.of(new Bucket(result.getTimestamp(1).toInstant(), result.getInt(2),
                         result.getTimestamp(3) == null ? null : result.getTimestamp(3).toInstant())) : Optional.empty(), action, subjectHash);
     }
+    public Optional<Bucket> find(String action, byte[] subjectHash) {
+        return jdbc.query("SELECT window_started_at, attempt_count, blocked_until FROM rate_limit_buckets WHERE action_name = ? AND subject_hash = ?",
+                result -> result.next() ? Optional.of(new Bucket(result.getTimestamp(1).toInstant(), result.getInt(2),
+                        result.getTimestamp(3) == null ? null : result.getTimestamp(3).toInstant())) : Optional.empty(), action, subjectHash);
+    }
     public void update(String action, byte[] subjectHash, Instant windowStartedAt, int attemptCount, Instant blockedUntil, Instant now) {
         jdbc.update("UPDATE rate_limit_buckets SET window_started_at = ?, attempt_count = ?, blocked_until = ?, updated_at = ? WHERE action_name = ? AND subject_hash = ?",
                 Timestamp.from(windowStartedAt), attemptCount, blockedUntil == null ? null : Timestamp.from(blockedUntil), Timestamp.from(now), action, subjectHash);
