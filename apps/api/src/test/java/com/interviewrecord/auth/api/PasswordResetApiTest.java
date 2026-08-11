@@ -61,5 +61,10 @@ class PasswordResetApiTest {
                         .content("{\"email\":\"user@example.com\"}"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("INVALID_CSRF_TOKEN"));
+
+        mvc.perform(post("/api/v1/auth/reset-password").contentType(APPLICATION_JSON)
+                        .content("{\"token\":\"reset-token\",\"newPassword\":\"NewPassword123\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("INVALID_CSRF_TOKEN"));
     }
 }

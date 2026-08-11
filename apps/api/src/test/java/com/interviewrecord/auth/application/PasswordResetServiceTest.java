@@ -21,6 +21,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.session.FindByIndexNameSessionRepository;
+import org.springframework.session.Session;
 
 @Import({FakeMailGateway.Config.class, PasswordResetServiceTest.MutableClockConfig.class})
 class PasswordResetServiceTest extends MySqlIntegrationTestBase {
@@ -33,6 +35,7 @@ class PasswordResetServiceTest extends MySqlIntegrationTestBase {
     @Autowired JpaPasswordResetTokenRepository tokens;
     @Autowired PasswordEncoder passwords;
     @Autowired FakeMailGateway mail;
+    @SuppressWarnings("rawtypes") @Autowired FindByIndexNameSessionRepository sessions;
 
     @BeforeEach
     void resetClockAndMail() {
@@ -43,13 +46,19 @@ class PasswordResetServiceTest extends MySqlIntegrationTestBase {
     @Test
     void resetConsumesTokenChangesPasswordAndRevokesEverySession() {
         User user = verifiedUser("reset@example.com");
+        createSessionFor(user.email());
+        createSessionFor(user.email());
         resets.request(user.email(), "127.0.0.1");
         String rawToken = mail.passwordResetMessages().getFirst().rawToken();
 
         resets.reset(rawToken, "NewPassword123");
 
         assertThat(passwords.matches("NewPassword123", users.requireById(user.id()).passwordHash())).isTrue();
+        assertThat(passwords.matches("Password123", users.requireById(user.id()).passwordHash())).isFalse();
         assertThat(tokens.findByUserId(user.id())).allMatch(token -> token.consumedAt() != null);
+        assertThat(sessions.findByPrincipalName(user.email())).isEmpty();
+        assertThatThrownBy(() -> resets.reset(rawToken, "AnotherPassword123"))
+                .isInstanceOf(InvalidRegistrationException.class).hasMessage("INVALID_OR_EXPIRED_TOKEN");
     }
 
     @Test
@@ -70,6 +79,41 @@ class PasswordResetServiceTest extends MySqlIntegrationTestBase {
         resets.request("unknown@example.com", "127.0.0.3");
 
         assertThat(mail.passwordResetMessages()).isEmpty();
+    }
+
+    @Test
+    void resetEnforcesPasswordPolicyWithoutConsumingTheToken() {
+        User user = verifiedUser("policy-reset@example.com");
+        resets.request(user.email(), "127.0.0.4");
+        String rawToken = mail.passwordResetMessages().getFirst().rawToken();
+
+        assertThatThrownBy(() -> resets.reset(rawToken, "PasswordOnly"))
+                .isInstanceOf(InvalidRegistrationException.class).hasMessage("INVALID_PASSWORD");
+        assertThat(passwords.matches("Password123", users.requireById(user.id()).passwordHash())).isTrue();
+        resets.reset(rawToken, "NewPassword123");
+    }
+
+    @Test
+    void forgotPasswordIsLimitedToFivePerEmailAndIpPerHour() {
+        User user = verifiedUser("email-cap-reset@example.com");
+        for (int attempt = 0; attempt < 5; attempt++) {
+            resets.request(user.email(), "127.0.0.5");
+        }
+        assertThatThrownBy(() -> resets.request(user.email(), "127.0.0.6"))
+                .isInstanceOf(com.interviewrecord.common.error.RateLimitExceededException.class);
+
+        for (int attempt = 0; attempt < 5; attempt++) {
+            resets.request("ip-cap-" + attempt + "@example.com", "127.0.0.7");
+        }
+        assertThatThrownBy(() -> resets.request("ip-cap-overflow@example.com", "127.0.0.7"))
+                .isInstanceOf(com.interviewrecord.common.error.RateLimitExceededException.class);
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private void createSessionFor(String email) {
+        Session session = (Session) sessions.createSession();
+        session.setAttribute(FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME, email);
+        sessions.save(session);
     }
 
     private User verifiedUser(String email) {

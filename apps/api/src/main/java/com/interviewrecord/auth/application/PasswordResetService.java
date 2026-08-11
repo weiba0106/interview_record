@@ -63,7 +63,9 @@ public class PasswordResetService {
         rateLimits.check("forgot-password-email", normalizedEmail, RATE_LIMIT, RATE_WINDOW, RATE_WINDOW);
         rateLimits.check("forgot-password-ip", requireClientIp(clientIp), RATE_LIMIT, RATE_WINDOW, RATE_WINDOW);
 
-        User user = users.findByEmail(normalizedEmail).orElse(null);
+        // Lock the stable user row before invalidating and issuing tokens. Token rows alone
+        // cannot serialize two first-time reset requests because there may be no token yet.
+        User user = users.findByEmailForUpdate(normalizedEmail).orElse(null);
         if (user == null || !user.isVerified()) return;
 
         Instant now = clock.instant();
