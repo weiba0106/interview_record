@@ -1,0 +1,13 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  session:
+    jdbc:
+      initialize-schema: never
+  mail:
+    host: localhost
+    port: 1
+
+app:
+  frontend-base-url: http://localhost:5173
