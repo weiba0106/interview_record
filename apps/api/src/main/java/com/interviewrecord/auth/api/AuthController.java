@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,18 +34,23 @@ public class AuthController {
     private final EmailVerificationService emailVerificationService;
     private final AuthService authService;
     private final PasswordResetService passwordResetService;
+    private final CsrfTokenRepository csrfTokenRepository;
     private final boolean secureSessionCookie;
     public AuthController(RegistrationService registrationService, EmailVerificationService emailVerificationService,
-            AuthService authService, PasswordResetService passwordResetService,
+            AuthService authService, PasswordResetService passwordResetService, CsrfTokenRepository csrfTokenRepository,
             @Value("${server.servlet.session.cookie.secure:true}") boolean secureSessionCookie) {
         this.registrationService = registrationService; this.emailVerificationService = emailVerificationService;
         this.authService = authService;
         this.passwordResetService = passwordResetService;
+        this.csrfTokenRepository = csrfTokenRepository;
         this.secureSessionCookie = secureSessionCookie;
     }
     @GetMapping("/csrf") @ResponseStatus(HttpStatus.NO_CONTENT)
-    void csrf(CsrfToken token) {
-        token.getToken();
+    void csrf(HttpServletRequest request, HttpServletResponse response) {
+        CsrfToken token = csrfTokenRepository.loadToken(request);
+        if (token == null) {
+            csrfTokenRepository.saveToken(csrfTokenRepository.generateToken(request), request, response);
+        }
     }
     @PostMapping("/register") @ResponseStatus(HttpStatus.CREATED)
     AuthDtos.RegisterResponse register(@Valid @RequestBody AuthDtos.RegisterRequest request, HttpServletRequest servletRequest) {
