@@ -22,6 +22,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.beans.factory.annotation.Value;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -30,10 +31,12 @@ public class AuthController {
     private final RegistrationService registrationService;
     private final EmailVerificationService emailVerificationService;
     private final AuthService authService;
+    private final boolean secureSessionCookie;
     public AuthController(RegistrationService registrationService, EmailVerificationService emailVerificationService,
-            AuthService authService) {
+            AuthService authService, @Value("${server.servlet.session.cookie.secure:true}") boolean secureSessionCookie) {
         this.registrationService = registrationService; this.emailVerificationService = emailVerificationService;
         this.authService = authService;
+        this.secureSessionCookie = secureSessionCookie;
     }
     @GetMapping("/csrf") @ResponseStatus(HttpStatus.NO_CONTENT)
     void csrf(CsrfToken token) {
@@ -72,6 +75,8 @@ public class AuthController {
         var cookie = new jakarta.servlet.http.Cookie("INTERVIEW_RECORD_SESSION", "");
         cookie.setPath("/");
         cookie.setHttpOnly(true);
+        cookie.setSecure(secureSessionCookie);
+        cookie.setAttribute("SameSite", "Lax");
         cookie.setMaxAge(0);
         response.addCookie(cookie);
     }

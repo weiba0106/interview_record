@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 
 import com.interviewrecord.auth.application.AuthService;
 import com.interviewrecord.auth.application.EmailVerificationService;
@@ -65,6 +66,9 @@ class LoginSessionApiTest {
                 .andExpect(jsonPath("$.emailVerified").value(true))
                 .andExpect(jsonPath("$.timeZone").value("Asia/Shanghai"))
                 .andExpect(jsonPath("$.theme").value("GRAPHITE_CORAL"));
+
+        org.assertj.core.api.Assertions.assertThat(((java.security.Principal) VERIFIED_USER).getName())
+                .isEqualTo("user@example.com");
     }
 
     @Test
@@ -122,7 +126,12 @@ class LoginSessionApiTest {
         MockHttpSession session = authenticatedSession(VERIFIED_USER);
 
         mvc.perform(post("/api/v1/auth/logout").session(session).with(csrf()))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isNoContent())
+                .andExpect(cookie().maxAge("INTERVIEW_RECORD_SESSION", 0))
+                .andExpect(cookie().secure("INTERVIEW_RECORD_SESSION", true))
+                .andExpect(result -> org.assertj.core.api.Assertions.assertThat(
+                        result.getResponse().getCookie("INTERVIEW_RECORD_SESSION").getAttribute("SameSite"))
+                        .isEqualTo("Lax"));
 
         mvc.perform(get("/api/v1/me").session(session))
                 .andExpect(status().isUnauthorized());

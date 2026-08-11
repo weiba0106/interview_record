@@ -12,7 +12,12 @@ public record AuthenticatedUser(
         String displayName,
         boolean emailVerified,
         String timeZone,
-        Theme theme) {
+        Theme theme) implements java.security.Principal {
+    @Override
+    public String getName() {
+        return email;
+    }
+
     public Collection<? extends GrantedAuthority> authorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_USER"));
     }

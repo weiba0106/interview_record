@@ -33,22 +33,23 @@ class RateLimitServiceTest extends MySqlIntegrationTestBase {
     }
 
     @Test
-    void successfulLoginResetsOnlyItsOwnFailureBucket() {
+    void successfulLoginResetsItsEmailAndIpFailureBucket() {
+        String subject = "user@example.com|203.0.113.5";
         for (int attempt = 0; attempt < 10; attempt++) {
-            rateLimitService.check("login-email", "user@example.com", 10, Duration.ofMinutes(15), Duration.ofMinutes(15));
+            rateLimitService.check("login-email-ip", subject, 10, Duration.ofMinutes(15), Duration.ofMinutes(15));
         }
 
         assertThatThrownBy(() -> rateLimitService.check(
-                "login-email", "user@example.com", 10, Duration.ofMinutes(15), Duration.ofMinutes(15)))
+                "login-email-ip", subject, 10, Duration.ofMinutes(15), Duration.ofMinutes(15)))
                 .isInstanceOf(RateLimitExceededException.class);
 
-        rateLimitService.reset("login-email", "user@example.com");
+        rateLimitService.reset("login-email-ip", subject);
 
         org.assertj.core.api.Assertions.assertThatCode(() -> rateLimitService.check(
-                "login-email", "user@example.com", 10, Duration.ofMinutes(15), Duration.ofMinutes(15)))
+                "login-email-ip", subject, 10, Duration.ofMinutes(15), Duration.ofMinutes(15)))
                 .doesNotThrowAnyException();
         org.assertj.core.api.Assertions.assertThat(buckets.find(
-                "login-email", secureTokens.sha256("login-email:user@example.com")))
+                "login-email-ip", secureTokens.sha256("login-email-ip:" + subject)))
                 .isPresent();
     }
 }
