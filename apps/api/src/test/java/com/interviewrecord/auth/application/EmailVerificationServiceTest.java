@@ -82,6 +82,16 @@ class EmailVerificationServiceTest extends MySqlIntegrationTestBase {
     }
 
     @Test
+    void firstResendUsesTheSameAcceptedOutcomeForKnownAndUnknownEmail() {
+        register("known-first-resend@example.com", "127.0.0.31");
+
+        verificationService.resend("known-first-resend@example.com", "127.0.0.31");
+        verificationService.resend("unknown-first-resend@example.com", "127.0.0.32");
+
+        assertThat(mail.verificationMessages()).hasSize(2);
+    }
+
+    @Test
     void resendHasNoExistenceSignalAndDoesNotMailVerifiedUser() {
         register("verified-resend@example.com", "127.0.0.4");
         String rawToken = mail.verificationMessages().getFirst().rawToken();
@@ -110,11 +120,12 @@ class EmailVerificationServiceTest extends MySqlIntegrationTestBase {
     @Test
     void enforcesCooldownAndPerEmailAndPerIpHourlyCaps() {
         register("email-cap@example.com", "127.0.0.7");
+        verificationService.resend("email-cap@example.com", "127.0.0.7");
         assertThatThrownBy(() -> verificationService.resend("email-cap@example.com", "127.0.0.7"))
                 .isInstanceOf(RateLimitExceededException.class);
 
         CLOCK.set(CLOCK.instant().plusSeconds(61));
-        for (int attempt = 0; attempt < 5; attempt++) {
+        for (int attempt = 0; attempt < 4; attempt++) {
             verificationService.resend("email-cap@example.com", "127.0.0.7");
             CLOCK.set(CLOCK.instant().plusSeconds(61));
         }

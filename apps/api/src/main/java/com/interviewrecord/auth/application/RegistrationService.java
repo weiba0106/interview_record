@@ -58,7 +58,6 @@ public class RegistrationService {
         defaults.createFor(user, command.timeZone(), now);
         IssuedToken issued = secureTokens.issue(Duration.ofHours(24));
         verificationTokens.save(new EmailVerificationToken(user, issued.sha256(), issued.expiresAt(), now));
-        rateLimits.check("resend-verification-cooldown", email, 1, Duration.ofMinutes(1), Duration.ofMinutes(1));
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override public void afterCommit() {
                 try { mail.sendVerificationEmail(email, issued.rawValue()); }
