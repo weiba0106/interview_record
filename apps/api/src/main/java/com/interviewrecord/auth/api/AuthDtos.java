@@ -14,4 +14,7 @@ public final class AuthDtos {
     public record RegisterResponse(String email, boolean verificationRequired) {}
     public record VerifyEmailRequest(@NotBlank @Size(max = 256) String token) {}
     public record ResendVerificationRequest(@NotBlank @Email @Size(max = 254) String email) {}
+    public record LoginRequest(
+            @NotBlank @Email @Size(max = 254) String email,
+            @NotBlank @Size(max = 72) String password) {}
 }

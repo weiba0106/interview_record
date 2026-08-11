@@ -15,6 +15,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import com.interviewrecord.auth.application.AuthService;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -72,6 +73,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                 .header(HttpHeaders.RETRY_AFTER, Long.toString(Math.max(1, exception.retryAfter().toSeconds())))
                 .body(new ApiError("RATE_LIMITED", "请求过于频繁", Map.of(), MDC.get("traceId")));
+    }
+
+    @ExceptionHandler(AuthService.InvalidCredentialsException.class)
+    ResponseEntity<ApiError> handleInvalidCredentials(AuthService.InvalidCredentialsException exception) {
+        return response(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "邮箱或密码错误", Map.of());
+    }
+
+    @ExceptionHandler(AuthService.EmailNotVerifiedException.class)
+    ResponseEntity<ApiError> handleEmailNotVerified(AuthService.EmailNotVerifiedException exception) {
+        return response(HttpStatus.FORBIDDEN, "EMAIL_NOT_VERIFIED", "请先验证邮箱", Map.of());
     }
 
     @ExceptionHandler(Exception.class)

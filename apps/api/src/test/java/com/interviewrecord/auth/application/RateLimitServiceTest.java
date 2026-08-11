@@ -31,4 +31,24 @@ class RateLimitServiceTest extends MySqlIntegrationTestBase {
         org.assertj.core.api.Assertions.assertThat(bucket.attemptCount()).isEqualTo(6);
         org.assertj.core.api.Assertions.assertThat(bucket.blockedUntil()).isNotNull();
     }
+
+    @Test
+    void successfulLoginResetsOnlyItsOwnFailureBucket() {
+        for (int attempt = 0; attempt < 10; attempt++) {
+            rateLimitService.check("login-email", "user@example.com", 10, Duration.ofMinutes(15), Duration.ofMinutes(15));
+        }
+
+        assertThatThrownBy(() -> rateLimitService.check(
+                "login-email", "user@example.com", 10, Duration.ofMinutes(15), Duration.ofMinutes(15)))
+                .isInstanceOf(RateLimitExceededException.class);
+
+        rateLimitService.reset("login-email", "user@example.com");
+
+        org.assertj.core.api.Assertions.assertThatCode(() -> rateLimitService.check(
+                "login-email", "user@example.com", 10, Duration.ofMinutes(15), Duration.ofMinutes(15)))
+                .doesNotThrowAnyException();
+        org.assertj.core.api.Assertions.assertThat(buckets.find(
+                "login-email", secureTokens.sha256("login-email:user@example.com")))
+                .isPresent();
+    }
 }

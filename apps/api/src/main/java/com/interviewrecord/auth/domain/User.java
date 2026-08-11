@@ -28,6 +28,8 @@ public class User {
     }
     public Long id() { return id; }
     public String email() { return email; }
+    public String passwordHash() { return passwordHash; }
+    public String displayName() { return displayName; }
     public boolean isVerified() { return emailVerifiedAt != null; }
     public void verify(Instant now) {
         if (emailVerifiedAt == null) {
