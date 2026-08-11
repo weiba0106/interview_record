@@ -2,7 +2,7 @@ spring:
   application:
     name: interview-record-api
   datasource:
-    url: ${DB_URL}
+    url: ${DB_URL:}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
   jpa:
@@ -18,8 +18,8 @@ spring:
     jdbc:
       initialize-schema: never
   mail:
-    host: ${MAIL_HOST}
-    port: ${MAIL_PORT}
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
 
 server:
   servlet:
@@ -31,4 +31,4 @@ server:
         same-site: lax
 
 app:
-  frontend-base-url: ${APP_BASE_URL}
+  frontend-base-url: ${APP_BASE_URL:http://localhost:5173}
