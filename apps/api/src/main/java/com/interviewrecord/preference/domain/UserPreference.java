@@ -11,6 +11,8 @@ import jakarta.persistence.MapsId;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.List;
 
 @Entity
 @Table(name = "user_preferences")
@@ -31,4 +33,24 @@ public class UserPreference {
     }
     public String timeZone() { return timeZone; }
     public Theme theme() { return theme; }
+    public User user() { return user; }
+    public List<Integer> interviewReminderOffsets() { return offsetsFromJson(interviewReminderOffsets); }
+    public List<Integer> deadlineReminderOffsets() { return offsetsFromJson(deadlineReminderOffsets); }
+    public void update(String timeZone, Theme theme, List<Integer> interviewOffsets, List<Integer> deadlineOffsets, Instant now) {
+        this.timeZone = timeZone;
+        this.theme = theme;
+        this.interviewReminderOffsets = offsetsToJson(interviewOffsets);
+        this.deadlineReminderOffsets = offsetsToJson(deadlineOffsets);
+        this.updatedAt = now;
+    }
+
+    private static List<Integer> offsetsFromJson(String json) {
+        String values = json.substring(1, json.length() - 1).trim();
+        if (values.isEmpty()) return List.of();
+        return Arrays.stream(values.split(",")).map(String::trim).map(Integer::valueOf).toList();
+    }
+
+    private static String offsetsToJson(List<Integer> offsets) {
+        return offsets.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(",", "[", "]"));
+    }
 }

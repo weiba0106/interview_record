@@ -13,6 +13,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import com.interviewrecord.auth.application.AuthService;
@@ -41,6 +42,11 @@ public class GlobalExceptionHandler {
                         (first, ignored) -> first,
                         LinkedHashMap::new));
         return response(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "请求参数有误", fieldErrors);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    ResponseEntity<ApiError> handleUnreadableRequest(HttpMessageNotReadableException exception) {
+        return response(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "请求参数有误", Map.of());
     }
 
     @ExceptionHandler(AuthenticationException.class)

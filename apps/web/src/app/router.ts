@@ -7,6 +7,7 @@ import LoginView from '@/views/LoginView.vue'
 import RegisterView from '@/views/RegisterView.vue'
 import ResetPasswordView from '@/views/ResetPasswordView.vue'
 import VerifyEmailView from '@/views/VerifyEmailView.vue'
+import SettingsView from '@/views/SettingsView.vue'
 
 export function resolveGuard(to: Pick<RouteLocationNormalizedLoaded, 'meta'>, auth: Pick<{ status: AuthStatus }, 'status'>) {
   if (to.meta.requiresAuth && auth.status !== 'authenticated') return { name: 'login' }
@@ -25,6 +26,7 @@ export function createAppRouter() {
       { path: '/forgot-password', name: 'forgot-password', component: ForgotPasswordView, meta: { guestOnly: true } },
       { path: '/reset-password', name: 'reset-password', component: ResetPasswordView, meta: { guestOnly: true } },
       { path: '/app', name: 'app', component: DashboardView, meta: { requiresAuth: true } },
+      { path: '/app/settings', name: 'settings', component: SettingsView, meta: { requiresAuth: true } },
     ],
   })
   router.beforeEach(async (to) => {

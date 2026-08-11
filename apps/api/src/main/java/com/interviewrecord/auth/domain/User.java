@@ -30,6 +30,10 @@ public class User {
     public String email() { return email; }
     public String passwordHash() { return passwordHash; }
     public String displayName() { return displayName; }
+    public void changeDisplayName(String displayName, Instant now) {
+        this.displayName = displayName;
+        this.updatedAt = now;
+    }
     public boolean isVerified() { return emailVerifiedAt != null; }
     public void changePassword(String passwordHash, Instant now) {
         this.passwordHash = passwordHash;

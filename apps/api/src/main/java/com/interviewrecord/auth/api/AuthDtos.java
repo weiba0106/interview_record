@@ -21,4 +21,5 @@ public final class AuthDtos {
     public record ResetPasswordRequest(
             @NotBlank @Size(max = 256) String token,
             @NotBlank @Size(max = 72) String newPassword) {}
+    public record DeleteAccountRequest(@NotBlank @Size(max = 72) String password) {}
 }

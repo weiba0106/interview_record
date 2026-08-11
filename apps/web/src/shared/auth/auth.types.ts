@@ -4,7 +4,7 @@ export interface CurrentUser {
   displayName: string
   emailVerified: boolean
   timeZone: string
-  theme: 'INDIGO' | 'FOREST' | 'APRICOT' | 'GRAPHITE_CORAL'
+  theme: 'INDIGO' | 'FOREST_TEAL' | 'WARM_APRICOT' | 'GRAPHITE_CORAL'
 }
 
 export type AuthStatus = 'unknown' | 'loading' | 'authenticated' | 'guest'
