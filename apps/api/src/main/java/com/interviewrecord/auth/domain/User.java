@@ -31,6 +31,10 @@ public class User {
     public String passwordHash() { return passwordHash; }
     public String displayName() { return displayName; }
     public boolean isVerified() { return emailVerifiedAt != null; }
+    public void changePassword(String passwordHash, Instant now) {
+        this.passwordHash = passwordHash;
+        this.updatedAt = now;
+    }
     public void verify(Instant now) {
         if (emailVerifiedAt == null) {
             emailVerifiedAt = now;

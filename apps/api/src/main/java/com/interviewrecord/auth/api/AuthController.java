@@ -5,6 +5,7 @@ import com.interviewrecord.auth.application.RegistrationResult;
 import com.interviewrecord.auth.application.RegistrationService;
 import com.interviewrecord.auth.application.EmailVerificationService;
 import com.interviewrecord.auth.application.AuthService;
+import com.interviewrecord.auth.application.PasswordResetService;
 import com.interviewrecord.common.security.AuthenticatedUser;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -31,11 +32,14 @@ public class AuthController {
     private final RegistrationService registrationService;
     private final EmailVerificationService emailVerificationService;
     private final AuthService authService;
+    private final PasswordResetService passwordResetService;
     private final boolean secureSessionCookie;
     public AuthController(RegistrationService registrationService, EmailVerificationService emailVerificationService,
-            AuthService authService, @Value("${server.servlet.session.cookie.secure:true}") boolean secureSessionCookie) {
+            AuthService authService, PasswordResetService passwordResetService,
+            @Value("${server.servlet.session.cookie.secure:true}") boolean secureSessionCookie) {
         this.registrationService = registrationService; this.emailVerificationService = emailVerificationService;
         this.authService = authService;
+        this.passwordResetService = passwordResetService;
         this.secureSessionCookie = secureSessionCookie;
     }
     @GetMapping("/csrf") @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -55,6 +59,14 @@ public class AuthController {
     @PostMapping("/resend-verification") @ResponseStatus(HttpStatus.ACCEPTED)
     void resendVerification(@Valid @RequestBody AuthDtos.ResendVerificationRequest request, HttpServletRequest servletRequest) {
         emailVerificationService.resend(request.email(), servletRequest.getRemoteAddr());
+    }
+    @PostMapping("/forgot-password") @ResponseStatus(HttpStatus.ACCEPTED)
+    void forgotPassword(@Valid @RequestBody AuthDtos.ForgotPasswordRequest request, HttpServletRequest servletRequest) {
+        passwordResetService.request(request.email(), servletRequest.getRemoteAddr());
+    }
+    @PostMapping("/reset-password") @ResponseStatus(HttpStatus.NO_CONTENT)
+    void resetPassword(@Valid @RequestBody AuthDtos.ResetPasswordRequest request) {
+        passwordResetService.reset(request.token(), request.newPassword());
     }
     @PostMapping("/login") @ResponseStatus(HttpStatus.NO_CONTENT)
     void login(@Valid @RequestBody AuthDtos.LoginRequest request, HttpServletRequest servletRequest,

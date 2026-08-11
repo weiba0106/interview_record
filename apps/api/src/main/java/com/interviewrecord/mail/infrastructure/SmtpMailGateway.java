@@ -24,4 +24,13 @@ public class SmtpMailGateway implements MailGateway {
                 + frontendBaseUrl + "/verify-email?token=" + URLEncoder.encode(rawToken, StandardCharsets.UTF_8));
         sender.send(message);
     }
+    @Override
+    public void sendPasswordResetEmail(String email, String rawToken) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(email);
+        message.setSubject("重置你的面试记录账号密码");
+        message.setText("请在 1 小时内打开以下链接重置密码：\n"
+                + frontendBaseUrl + "/reset-password?token=" + URLEncoder.encode(rawToken, StandardCharsets.UTF_8));
+        sender.send(message);
+    }
 }

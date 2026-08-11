@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Primary;
 
 public final class FakeMailGateway implements MailGateway {
     private final List<VerificationMessage> verificationMessages = new CopyOnWriteArrayList<>();
+    private final List<PasswordResetMessage> passwordResetMessages = new CopyOnWriteArrayList<>();
     private volatile boolean failVerificationDelivery;
 
     @Override
@@ -21,11 +22,18 @@ public final class FakeMailGateway implements MailGateway {
     public List<VerificationMessage> verificationMessages() {
         return List.copyOf(verificationMessages);
     }
+    @Override
+    public void sendPasswordResetEmail(String email, String rawToken) {
+        if (failVerificationDelivery) throw new MailSendException("simulated delivery failure");
+        passwordResetMessages.add(new PasswordResetMessage(email, rawToken));
+    }
+    public List<PasswordResetMessage> passwordResetMessages() { return List.copyOf(passwordResetMessages); }
 
     public void failVerificationDelivery() { failVerificationDelivery = true; }
-    public void reset() { verificationMessages.clear(); failVerificationDelivery = false; }
+    public void reset() { verificationMessages.clear(); passwordResetMessages.clear(); failVerificationDelivery = false; }
 
     public record VerificationMessage(String email, String rawToken) {}
+    public record PasswordResetMessage(String email, String rawToken) {}
 
     @TestConfiguration
     public static class Config {

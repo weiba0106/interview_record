@@ -17,4 +17,8 @@ public final class AuthDtos {
     public record LoginRequest(
             @NotBlank @Email @Size(max = 254) String email,
             @NotBlank @Size(max = 72) String password) {}
+    public record ForgotPasswordRequest(@NotBlank @Email @Size(max = 254) String email) {}
+    public record ResetPasswordRequest(
+            @NotBlank @Size(max = 256) String token,
+            @NotBlank @Size(max = 72) String newPassword) {}
 }

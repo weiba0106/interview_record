@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.interviewrecord.auth.application.AuthService;
 import com.interviewrecord.auth.application.EmailVerificationService;
 import com.interviewrecord.auth.application.RegistrationService;
+import com.interviewrecord.auth.application.PasswordResetService;
 import com.interviewrecord.common.config.SecurityConfig;
 import com.interviewrecord.common.error.GlobalExceptionHandler;
 import com.interviewrecord.common.security.AuthenticatedUser;
@@ -47,6 +48,7 @@ class LoginSessionApiTest {
     @MockitoBean RegistrationService registrationService;
     @MockitoBean EmailVerificationService emailVerificationService;
     @MockitoBean AuthService authService;
+    @MockitoBean PasswordResetService passwordResetService;
 
     @Test
     void verifiedUserLogsInAndSessionCanReadCurrentUser() throws Exception {
