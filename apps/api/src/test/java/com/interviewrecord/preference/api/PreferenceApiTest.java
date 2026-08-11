@@ -95,6 +95,16 @@ class PreferenceApiTest {
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
+    @Test
+    void updateRejectsNullReminderOffsetsWithStableValidationError() throws Exception {
+        mvc.perform(patch("/api/v1/me/preferences").with(authentication(authenticationFor(new AuthenticatedUser(
+                        42L, "alice@example.com", "Alice", true, "Asia/Shanghai", Theme.GRAPHITE_CORAL)))).with(csrf())
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"displayName\":\"Alice\",\"timeZone\":\"Asia/Shanghai\",\"theme\":\"FOREST_TEAL\",\"interviewReminderOffsets\":[null],\"deadlineReminderOffsets\":[60]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
     private UsernamePasswordAuthenticationToken authenticationFor(AuthenticatedUser user) {
         return UsernamePasswordAuthenticationToken.authenticated(user, null, user.authorities());
     }

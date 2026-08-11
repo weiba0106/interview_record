@@ -49,12 +49,12 @@ function submit() {
 <template>
   <form novalidate @submit.prevent="submit">
     <label for="preference-display-name">显示名称</label>
-    <ElInput id="preference-display-name" v-model="form.displayName" name="displayName" autocomplete="name" />
-    <p v-if="fieldErrors.displayName" data-field-error="displayName" role="alert">{{ fieldErrors.displayName }}</p>
+    <ElInput id="preference-display-name" v-model="form.displayName" name="displayName" autocomplete="name" :aria-describedby="fieldErrors.displayName ? 'preference-display-name-error' : undefined" />
+    <p v-if="fieldErrors.displayName" id="preference-display-name-error" data-field-error="displayName" role="alert">{{ fieldErrors.displayName }}</p>
 
     <label for="preference-time-zone">时区（IANA，例如 Asia/Shanghai）</label>
-    <ElInput id="preference-time-zone" v-model="form.timeZone" name="timeZone" />
-    <p v-if="fieldErrors.timeZone" data-field-error="timeZone" role="alert">{{ fieldErrors.timeZone }}</p>
+    <ElInput id="preference-time-zone" v-model="form.timeZone" name="timeZone" :aria-describedby="fieldErrors.timeZone ? 'preference-time-zone-error' : undefined" />
+    <p v-if="fieldErrors.timeZone" id="preference-time-zone-error" data-field-error="timeZone" role="alert">{{ fieldErrors.timeZone }}</p>
 
     <label for="preference-theme">主题</label>
     <ElSelect id="preference-theme" v-model="form.theme" name="theme">
@@ -65,12 +65,12 @@ function submit() {
     </ElSelect>
 
     <label for="interview-reminder-offsets">面试默认提醒（分钟，逗号分隔）</label>
-    <ElInput id="interview-reminder-offsets" v-model="form.interviewReminderOffsets" name="interviewReminderOffsets" />
-    <p v-if="fieldErrors.interviewReminderOffsets" data-field-error="interviewReminderOffsets" role="alert">{{ fieldErrors.interviewReminderOffsets }}</p>
+    <ElInput id="interview-reminder-offsets" v-model="form.interviewReminderOffsets" name="interviewReminderOffsets" :aria-describedby="fieldErrors.interviewReminderOffsets ? 'preference-interview-reminder-offsets-error' : undefined" />
+    <p v-if="fieldErrors.interviewReminderOffsets" id="preference-interview-reminder-offsets-error" data-field-error="interviewReminderOffsets" role="alert">{{ fieldErrors.interviewReminderOffsets }}</p>
 
     <label for="deadline-reminder-offsets">截止日期默认提醒（分钟，逗号分隔）</label>
-    <ElInput id="deadline-reminder-offsets" v-model="form.deadlineReminderOffsets" name="deadlineReminderOffsets" />
-    <p v-if="fieldErrors.deadlineReminderOffsets" data-field-error="deadlineReminderOffsets" role="alert">{{ fieldErrors.deadlineReminderOffsets }}</p>
+    <ElInput id="deadline-reminder-offsets" v-model="form.deadlineReminderOffsets" name="deadlineReminderOffsets" :aria-describedby="fieldErrors.deadlineReminderOffsets ? 'preference-deadline-reminder-offsets-error' : undefined" />
+    <p v-if="fieldErrors.deadlineReminderOffsets" id="preference-deadline-reminder-offsets-error" data-field-error="deadlineReminderOffsets" role="alert">{{ fieldErrors.deadlineReminderOffsets }}</p>
 
     <ElButton native-type="submit" type="primary">保存偏好</ElButton>
   </form>

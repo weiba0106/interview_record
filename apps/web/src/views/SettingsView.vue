@@ -14,7 +14,8 @@ const deletePassword = ref('')
 const pendingDeletion = ref(false)
 const message = ref('')
 const error = ref('')
-const preferences = computed<Preferences>(() => ({
+const savedPreferences = ref<Preferences | null>(null)
+const preferences = computed<Preferences>(() => savedPreferences.value ?? ({
   displayName: auth.user?.displayName ?? '',
   timeZone: auth.user?.timeZone ?? 'Asia/Shanghai',
   theme: auth.user?.theme ?? 'GRAPHITE_CORAL',
@@ -25,8 +26,9 @@ const preferences = computed<Preferences>(() => ({
 async function savePreferences(next: Preferences) {
   error.value = ''; message.value = ''
   try {
-    await updatePreferences(next)
-    await auth.loadCurrentUser()
+    const saved = await updatePreferences(next)
+    savedPreferences.value = saved
+    if (auth.user) auth.user = { ...auth.user, displayName: saved.displayName, timeZone: saved.timeZone, theme: saved.theme }
     message.value = '偏好已保存'
   } catch (caught) {
     error.value = isApiRequestError(caught) ? caught.apiError.message : '保存失败，请稍后重试'
