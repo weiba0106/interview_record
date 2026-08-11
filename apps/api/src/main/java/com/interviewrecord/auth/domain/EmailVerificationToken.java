@@ -23,4 +23,7 @@ public class EmailVerificationToken {
     public EmailVerificationToken(User user, byte[] tokenHash, Instant expiresAt, Instant createdAt) {
         this.user = user; this.tokenHash = tokenHash.clone(); this.expiresAt = expiresAt; this.createdAt = createdAt;
     }
+    public User user() { return user; }
+    public boolean isUsableAt(Instant now) { return consumedAt == null && expiresAt.isAfter(now); }
+    public void consume(Instant now) { if (consumedAt == null) consumedAt = now; }
 }

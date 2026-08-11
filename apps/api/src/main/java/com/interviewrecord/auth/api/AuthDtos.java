@@ -12,4 +12,6 @@ public final class AuthDtos {
             @NotBlank @Size(max = 80) String displayName,
             @Size(max = 64) String timeZone) {}
     public record RegisterResponse(String email, boolean verificationRequired) {}
+    public record VerifyEmailRequest(@NotBlank @Size(max = 256) String token) {}
+    public record ResendVerificationRequest(@NotBlank @Email @Size(max = 254) String email) {}
 }

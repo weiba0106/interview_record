@@ -3,6 +3,7 @@ package com.interviewrecord.auth.api;
 import com.interviewrecord.auth.application.RegisterCommand;
 import com.interviewrecord.auth.application.RegistrationResult;
 import com.interviewrecord.auth.application.RegistrationService;
+import com.interviewrecord.auth.application.EmailVerificationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -21,9 +22,11 @@ import org.springframework.security.web.csrf.CsrfTokenRepository;
 @ConditionalOnExpression("'${spring.datasource.url:}' != ''")
 public class AuthController {
     private final RegistrationService registrationService;
+    private final EmailVerificationService emailVerificationService;
     private final CsrfTokenRepository csrfTokens;
-    public AuthController(RegistrationService registrationService, CsrfTokenRepository csrfTokens) {
-        this.registrationService = registrationService; this.csrfTokens = csrfTokens;
+    public AuthController(RegistrationService registrationService, EmailVerificationService emailVerificationService,
+            CsrfTokenRepository csrfTokens) {
+        this.registrationService = registrationService; this.emailVerificationService = emailVerificationService; this.csrfTokens = csrfTokens;
     }
     @GetMapping("/csrf") @ResponseStatus(HttpStatus.NO_CONTENT)
     void csrf(HttpServletRequest request, HttpServletResponse response) {
@@ -34,5 +37,13 @@ public class AuthController {
         RegistrationResult result = registrationService.register(new RegisterCommand(request.email(), request.password(), request.displayName(),
                 request.timeZone(), servletRequest.getRemoteAddr()));
         return new AuthDtos.RegisterResponse(result.normalizedEmail(), true);
+    }
+    @PostMapping("/verify-email") @ResponseStatus(HttpStatus.NO_CONTENT)
+    void verifyEmail(@Valid @RequestBody AuthDtos.VerifyEmailRequest request) {
+        emailVerificationService.verify(request.token());
+    }
+    @PostMapping("/resend-verification") @ResponseStatus(HttpStatus.ACCEPTED)
+    void resendVerification(@Valid @RequestBody AuthDtos.ResendVerificationRequest request, HttpServletRequest servletRequest) {
+        emailVerificationService.resend(request.email(), servletRequest.getRemoteAddr());
     }
 }
