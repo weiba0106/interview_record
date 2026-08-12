@@ -15,7 +15,6 @@ import org.springframework.security.web.csrf.CsrfTokenRepository;
 import com.interviewrecord.auth.domain.User;
 import com.interviewrecord.auth.infrastructure.JpaUserRepository;
 import java.util.List;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.authentication.ProviderManager;
@@ -35,7 +34,6 @@ public class SecurityConfig {
     }
 
     @Bean
-    @ConditionalOnBean(JpaUserRepository.class)
     UserDetailsService userDetailsService(JpaUserRepository users) {
         return email -> users.findByEmail(email)
                 .map(this::asUserDetails)
@@ -43,7 +41,6 @@ public class SecurityConfig {
     }
 
     @Bean
-    @ConditionalOnBean(JpaUserRepository.class)
     AuthenticationManager authenticationManager(JpaUserRepository users, PasswordEncoder passwordEncoder) {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService(users));
         provider.setPasswordEncoder(passwordEncoder);
