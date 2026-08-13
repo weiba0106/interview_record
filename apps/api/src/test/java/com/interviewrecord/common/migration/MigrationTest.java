@@ -1,6 +1,7 @@
 package com.interviewrecord.common.migration;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.interviewrecord.support.MySqlIntegrationTestBase;
 import org.flywaydb.core.Flyway;
@@ -18,7 +19,7 @@ class MigrationTest extends MySqlIntegrationTestBase {
 
     @Test
     void appliesAccountAndSessionMigrations() {
-        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("2");
+        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("5");
 
         Integer users = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM information_schema.tables "
@@ -31,5 +32,40 @@ class MigrationTest extends MySqlIntegrationTestBase {
 
         assertThat(users).isEqualTo(1);
         assertThat(sessions).isEqualTo(1);
+    }
+
+    @Test
+    void appliesCompanyPositionInterviewAndScheduleMigrations() {
+        for (String table : new String[] {"companies", "positions", "interview_rounds",
+                "interview_questions", "schedule_events"}) {
+            Integer count = jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM information_schema.tables "
+                            + "WHERE table_schema = DATABASE() AND table_name = ?",
+                    Integer.class, table);
+            assertThat(count).as("table " + table).isEqualTo(1);
+        }
+
+        Integer roundUnique = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE()"
+                        + " AND table_name = 'interview_rounds' AND index_name = 'uk_rounds_position_number'",
+                Integer.class);
+        assertThat(roundUnique).isGreaterThanOrEqualTo(1);
+
+        Integer scheduleUserIndex = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE()"
+                        + " AND table_name = 'schedule_events' AND column_name = 'user_id'",
+                Integer.class);
+        assertThat(scheduleUserIndex).isGreaterThanOrEqualTo(1);
+    }
+
+    @Test
+    void scheduleTypeCompatibilityMigrationAcceptsHrCommunicationAndRejectsLegacyAssessment() {
+        jdbc.update("INSERT INTO schedule_events (user_id, title, event_type, status, version, created_at, updated_at)"
+                + " VALUES (1, 'HR 沟通', 'HR_COMMUNICATION', 'PENDING', 0, UTC_TIMESTAMP(6), UTC_TIMESTAMP(6))");
+
+        assertThatThrownBy(() -> jdbc.update("INSERT INTO schedule_events"
+                + " (user_id, title, event_type, status, version, created_at, updated_at)"
+                + " VALUES (1, '旧测评', 'ASSESSMENT', 'PENDING', 0, UTC_TIMESTAMP(6), UTC_TIMESTAMP(6))"))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
     }
 }
