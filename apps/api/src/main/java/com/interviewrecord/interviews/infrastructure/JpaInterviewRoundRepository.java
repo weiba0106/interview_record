@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface JpaInterviewRoundRepository extends JpaRepository<InterviewRound, Long> {
     Optional<InterviewRound> findByIdAndUserId(Long id, Long userId);
 
+    List<InterviewRound> findAllByUserId(Long userId);
+
     @org.springframework.data.jpa.repository.Query("""
             SELECT r FROM InterviewRound r WHERE r.userId = :userId AND r.positionId = :positionId
             ORDER BY CASE WHEN r.startsAt IS NULL THEN 1 ELSE 0 END ASC, r.startsAt ASC, r.roundNumber ASC
