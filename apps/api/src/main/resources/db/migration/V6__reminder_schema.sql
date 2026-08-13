@@ -1,0 +1,22 @@
+CREATE TABLE reminders (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    schedule_id BIGINT NOT NULL,
+    idempotency_key VARCHAR(180) NOT NULL,
+    scheduled_at DATETIME(6) NOT NULL,
+    status VARCHAR(16) NOT NULL DEFAULT 'PENDING',
+    attempt_count INT NOT NULL DEFAULT 0,
+    next_attempt_at DATETIME(6) NOT NULL,
+    sent_at DATETIME(6) NULL,
+    last_error_code VARCHAR(80) NULL,
+    created_at DATETIME(6) NOT NULL,
+    updated_at DATETIME(6) NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_reminders_idempotency (idempotency_key),
+    KEY ix_reminders_user_schedule (user_id, schedule_id),
+    KEY ix_reminders_ready (status, next_attempt_at, scheduled_at),
+    CONSTRAINT fk_reminders_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_reminders_schedule FOREIGN KEY (schedule_id) REFERENCES schedule_events(id) ON DELETE CASCADE,
+    CONSTRAINT ck_reminders_status CHECK (status IN ('PENDING', 'PROCESSING', 'SENT', 'FAILED', 'CANCELLED')),
+    CONSTRAINT ck_reminders_attempt_count CHECK (attempt_count >= 0 AND attempt_count <= 3)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

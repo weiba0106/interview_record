@@ -48,6 +48,11 @@ public class CapturingMailGateway implements MailGateway {
         append(email, "RESET_PASSWORD", "/reset-password?token=" + encode(rawToken));
     }
 
+    @Override
+    public void sendScheduleReminder(String email, String scheduleTitle, Instant scheduledFor) {
+        append(email, "SCHEDULE_REMINDER", "/app/schedules");
+    }
+
     private String encode(String rawToken) {
         return URLEncoder.encode(rawToken, StandardCharsets.UTF_8);
     }

@@ -11,6 +11,7 @@ import com.interviewrecord.scheduling.api.ScheduleDtos.ScheduleResponse;
 import com.interviewrecord.scheduling.domain.ScheduleEvent;
 import com.interviewrecord.scheduling.domain.Urgency;
 import com.interviewrecord.scheduling.infrastructure.JpaScheduleEventRepository;
+import com.interviewrecord.reminders.application.ReminderService;
 import com.interviewrecord.tracking.domain.Position;
 import com.interviewrecord.tracking.infrastructure.JpaPositionRepository;
 import java.time.Clock;
@@ -35,11 +36,18 @@ public class ScheduleService {
     private final JpaScheduleEventRepository schedules;
     private final JpaPositionRepository positions;
     private final JpaInterviewRoundRepository rounds;
+    private final ReminderService reminders;
     private final Clock clock;
 
     public ScheduleService(JpaScheduleEventRepository schedules, JpaPositionRepository positions,
+            JpaInterviewRoundRepository rounds, ReminderService reminders, Clock clock) {
+        this.schedules = schedules; this.positions = positions; this.rounds = rounds;
+        this.reminders = reminders; this.clock = clock;
+    }
+
+    public ScheduleService(JpaScheduleEventRepository schedules, JpaPositionRepository positions,
             JpaInterviewRoundRepository rounds, Clock clock) {
-        this.schedules = schedules; this.positions = positions; this.rounds = rounds; this.clock = clock;
+        this(schedules, positions, rounds, null, clock);
     }
 
     @Transactional(readOnly = true)
@@ -70,6 +78,7 @@ public class ScheduleService {
     public ScheduleResponse create(Long userId, ScheduleRequest request) {
         ScheduleEvent event = buildFromRequest(userId, request);
         ScheduleEvent saved = schedules.save(event);
+        synchronizeReminders(userId, saved);
         return toResponse(saved, clock.instant(), positionTitles(userId, List.of(saved)));
     }
 
@@ -84,11 +93,14 @@ public class ScheduleService {
             if (!linked.isEmpty()) {
                 ScheduleEvent existing = linked.getFirst();
                 existing.reschedule(startsAt, endsAt, clock.instant());
+                synchronizeReminders(userId, existing);
                 return existing;
             }
         }
-        return schedules.save(new ScheduleEvent(userId, title, eventType, startsAt, endsAt,
+        ScheduleEvent created = schedules.save(new ScheduleEvent(userId, title, eventType, startsAt, endsAt,
                 positionId, roundId, location, notes, clock.instant()));
+        synchronizeReminders(userId, created);
+        return created;
     }
 
     @Transactional
@@ -106,6 +118,7 @@ public class ScheduleService {
         if (event.interviewRoundId() != null) {
             syncRoundFromSchedule(userId, event);
         }
+        synchronizeReminders(userId, event);
         return toResponse(event, clock.instant(), positionTitles(userId, List.of(event)));
     }
 
@@ -114,6 +127,7 @@ public class ScheduleService {
         requireValidStatus(status);
         ScheduleEvent event = requireOwned(userId, scheduleId);
         event.changeStatus(status, clock.instant());
+        synchronizeReminders(userId, event);
         return toResponse(event, clock.instant(), positionTitles(userId, List.of(event)));
     }
 
@@ -133,7 +147,9 @@ public class ScheduleService {
 
     @Transactional
     public void delete(Long userId, Long scheduleId) {
-        schedules.delete(requireOwned(userId, scheduleId));
+        ScheduleEvent event = requireOwned(userId, scheduleId);
+        cancelReminders(userId, scheduleId);
+        schedules.delete(event);
     }
 
     /** Keeps schedules attached to a round consistent when the round time changes. */
@@ -141,7 +157,7 @@ public class ScheduleService {
     public void syncFromRound(Long userId, InterviewRound round) {
         Instant now = clock.instant();
         schedules.findAllByUserIdAndInterviewRoundId(userId, round.id())
-                .forEach(event -> event.reschedule(round.startsAt(), round.endsAt(), now));
+                .forEach(event -> { event.reschedule(round.startsAt(), round.endsAt(), now); synchronizeReminders(userId, event); });
     }
 
     private void syncRoundFromSchedule(Long userId, ScheduleEvent event) {
@@ -150,7 +166,7 @@ public class ScheduleService {
         Instant now = clock.instant();
         round.reschedule(event.startsAt(), event.endsAt(), now);
         schedules.findAllByUserIdAndInterviewRoundId(userId, round.id())
-                .forEach(linked -> linked.reschedule(round.startsAt(), round.endsAt(), now));
+                .forEach(linked -> { linked.reschedule(round.startsAt(), round.endsAt(), now); synchronizeReminders(userId, linked); });
     }
 
     @Transactional(readOnly = true)
@@ -162,7 +178,10 @@ public class ScheduleService {
     /** Removes schedules before the owning interview round is deleted. */
     @Transactional
     public void deleteLinkedToRound(Long userId, Long roundId) {
-        schedules.findAllByUserIdAndInterviewRoundId(userId, roundId).forEach(schedules::delete);
+        schedules.findAllByUserIdAndInterviewRoundId(userId, roundId).forEach(event -> {
+            cancelReminders(userId, event.id());
+            schedules.delete(event);
+        });
     }
 
     /** Overdue pending events first, then the soonest events within the next 7 days. */
@@ -248,6 +267,14 @@ public class ScheduleService {
 
     private String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private void synchronizeReminders(Long userId, ScheduleEvent event) {
+        if (reminders != null) reminders.synchronize(userId, event);
+    }
+
+    private void cancelReminders(Long userId, Long scheduleId) {
+        if (reminders != null) reminders.cancel(userId, scheduleId);
     }
 
     private Map<Long, String> positionTitles(Long userId, List<ScheduleEvent> events) {
