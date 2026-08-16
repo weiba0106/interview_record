@@ -109,4 +109,36 @@ describe('DashboardView', () => {
     expect(wrapper.text()).toContain('先创建你的第一家公司和岗位')
     expect(wrapper.find('button[data-action="empty-create-position"]').exists()).toBe(true)
   })
+
+  it('filters dashboard positions by job type chip and applied date range', async () => {
+    const second = {
+      ...position,
+      id: '102',
+      title: '前端开发工程师',
+      jobTypeId: '22',
+      jobTypeName: '日常实习',
+      appliedAt: '2026-06-01T00:00:00Z',
+      status: { id: '32', name: 'Offer', color: '#2f81f7', statisticsCategory: 'SUCCESS' },
+      nextSchedule: null,
+    }
+    server.use(
+      http.get('/api/v1/dashboard', () => HttpResponse.json(dashboardBody({
+        positions: [position, second],
+        schedules: [],
+      }))),
+    )
+    const wrapper = mount(DashboardView, { global: { plugins: [createPinia(), ElementPlus] } })
+    await vi.waitFor(() => expect(wrapper.text()).toContain('前端开发工程师'))
+
+    const jobTypeChip = wrapper.findAll('button.chip').find((item) => item.text() === '日常实习')
+    await jobTypeChip!.trigger('click')
+
+    expect(wrapper.text()).toContain('前端开发工程师')
+    expect(wrapper.text()).not.toContain('后端开发工程师')
+
+    await wrapper.get('input[name="dashboardAppliedFrom"]').setValue('2026-08-01')
+
+    expect(wrapper.text()).not.toContain('前端开发工程师')
+    expect(wrapper.text()).toContain('没有匹配的岗位')
+  })
 })

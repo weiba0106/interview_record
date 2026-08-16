@@ -15,6 +15,9 @@ const dashboard = ref<DashboardData | null>(null)
 
 const positionKeyword = ref('')
 const positionStatusFilter = ref('')
+const positionJobTypeFilter = ref('')
+const positionAppliedFrom = ref('')
+const positionAppliedTo = ref('')
 
 const isEmpty = computed(() =>
   dashboard.value !== null
@@ -41,7 +44,7 @@ const urgencySummary = computed(() =>
     ? `今天有 ${urgentScheduleCount.value} 项紧急日程，请及时处理`
     : '今天暂无紧急日程，保持自己的节奏')
 
-/** 全部岗位卡片：关键词 + 状态胶囊筛选（客户端过滤工作台快照） */
+/** 全部岗位卡片：关键词 + 状态/招聘类型胶囊 + 投递日期范围筛选（客户端过滤工作台快照） */
 const statusOptions = computed(() => {
   const seen = new Map<string, { id: string; name: string; color: string }>()
   for (const position of dashboard.value?.positions ?? []) {
@@ -49,11 +52,17 @@ const statusOptions = computed(() => {
   }
   return [...seen.values()]
 })
+const jobTypeOptions = computed(() => [...new Set((dashboard.value?.positions ?? []).map((position) => position.jobTypeName).filter(Boolean))])
 const filteredPositions = computed(() => {
   const keyword = positionKeyword.value.trim().toLowerCase()
+  const from = positionAppliedFrom.value
+  const to = positionAppliedTo.value
   return (dashboard.value?.positions ?? []).filter((position) =>
     (!keyword || `${position.companyName} ${position.title}`.toLowerCase().includes(keyword))
-    && (!positionStatusFilter.value || position.status.id === positionStatusFilter.value))
+    && (!positionStatusFilter.value || position.status.id === positionStatusFilter.value)
+    && (!positionJobTypeFilter.value || position.jobTypeName === positionJobTypeFilter.value)
+    && (!from || !position.appliedAt || position.appliedAt >= from)
+    && (!to || !position.appliedAt || position.appliedAt <= to))
 })
 
 /** 即将到来：按日期分组 */
@@ -172,16 +181,20 @@ async function setStatus(schedule: Schedule, status: 'COMPLETED' | 'CANCELLED') 
               <RouterLink class="ir-panel-link" :to="{ name: 'positions' }">进入岗位列表</RouterLink>
             </div>
             <div class="dashboard-toolbar">
-              <ElInput
-                v-model="positionKeyword"
-                name="dashboardPositionKeyword"
-                placeholder="搜索公司或职位"
-                clearable
-                class="dashboard-search"
-                aria-label="搜索岗位"
-              >
-                <template #prefix><ElIcon><Search /></ElIcon></template>
-              </ElInput>
+              <div class="dashboard-toolbar-row">
+                <ElInput
+                  v-model="positionKeyword"
+                  name="dashboardPositionKeyword"
+                  placeholder="搜索公司或职位"
+                  clearable
+                  class="dashboard-search"
+                  aria-label="搜索岗位"
+                >
+                  <template #prefix><ElIcon><Search /></ElIcon></template>
+                </ElInput>
+                <label class="dashboard-date-filter">投递开始<input v-model="positionAppliedFrom" name="dashboardAppliedFrom" type="date" aria-label="投递日期开始" /></label>
+                <label class="dashboard-date-filter">投递结束<input v-model="positionAppliedTo" name="dashboardAppliedTo" type="date" aria-label="投递日期结束" /></label>
+              </div>
               <div class="chip-row dashboard-chips" role="group" aria-label="按状态筛选">
                 <button type="button" class="chip" :aria-pressed="positionStatusFilter === ''" @click="positionStatusFilter = ''">全部</button>
                 <button
@@ -193,6 +206,18 @@ async function setStatus(schedule: Schedule, status: 'COMPLETED' | 'CANCELLED') 
                   :style="{ '--pill': status.color }"
                   @click="positionStatusFilter = positionStatusFilter === status.id ? '' : status.id"
                 ><i class="chip-dot" aria-hidden="true" />{{ status.name }}</button>
+              </div>
+              <div v-if="jobTypeOptions.length > 0" class="chip-row dashboard-chips dashboard-chips-types" role="group" aria-label="按招聘类型筛选">
+                <span class="chips-label">类型</span>
+                <button type="button" class="chip" :aria-pressed="positionJobTypeFilter === ''" @click="positionJobTypeFilter = ''">全部</button>
+                <button
+                  v-for="jobType in jobTypeOptions"
+                  :key="jobType"
+                  type="button"
+                  class="chip"
+                  :aria-pressed="positionJobTypeFilter === jobType"
+                  @click="positionJobTypeFilter = positionJobTypeFilter === jobType ? '' : jobType"
+                >{{ jobType }}</button>
               </div>
             </div>
             <div class="table-scroll">
@@ -289,8 +314,20 @@ async function setStatus(schedule: Schedule, status: 'COMPLETED' | 'CANCELLED') 
 }
 .dashboard-table { min-width: 600px; }
 .dashboard-toolbar { display: flex; flex-direction: column; gap: 0; }
-.dashboard-search { width: min(280px, 100%); margin: 12px 16px 0; }
-.dashboard-chips { padding: 10px 16px 12px; border-bottom: 0; }
+.dashboard-toolbar-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 16px 0; }
+.dashboard-search { width: min(260px, 100%); }
+.dashboard-date-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ir-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.dashboard-date-filter input { width: 138px; }
+.dashboard-chips { padding: 10px 16px 4px; border-bottom: 0; }
+.dashboard-chips-types { padding-top: 4px; padding-bottom: 12px; }
+.chips-label { color: var(--ir-faint); font-size: 11.5px; font-weight: 700; align-self: center; }
 .chip-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pill, var(--ir-muted)); flex: none; }
 .schedule-list {
   list-style: none;
