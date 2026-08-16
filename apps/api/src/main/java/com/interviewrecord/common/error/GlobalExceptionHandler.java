@@ -4,6 +4,8 @@ import jakarta.validation.ConstraintViolationException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -20,6 +22,7 @@ import com.interviewrecord.auth.application.AuthService;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException exception) {
@@ -46,6 +49,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     ResponseEntity<ApiError> handleUnreadableRequest(HttpMessageNotReadableException exception) {
+        log.warn("Rejected unreadable request body: {}", exception.getMessage());
         return response(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "请求参数有误", Map.of());
     }
 
@@ -64,6 +68,12 @@ public class GlobalExceptionHandler {
         return response(HttpStatus.CONFLICT, "CONFLICT", "资源状态冲突", Map.of());
     }
 
+    @ExceptionHandler(org.springframework.orm.ObjectOptimisticLockingFailureException.class)
+    ResponseEntity<ApiError> handleOptimisticLock(
+            org.springframework.orm.ObjectOptimisticLockingFailureException exception) {
+        return response(HttpStatus.CONFLICT, "CONCURRENT_UPDATE", "数据已被更新，请刷新后重试", Map.of());
+    }
+
     @ExceptionHandler(EmailAlreadyRegisteredException.class)
     ResponseEntity<ApiError> handleEmailAlreadyRegistered(EmailAlreadyRegisteredException exception) {
         return response(HttpStatus.CONFLICT, "EMAIL_ALREADY_REGISTERED", "邮箱已注册", Map.of());
@@ -72,6 +82,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidRegistrationException.class)
     ResponseEntity<ApiError> handleInvalidRegistration(InvalidRegistrationException exception) {
         return response(HttpStatus.BAD_REQUEST, exception.getMessage(), "请求参数有误", Map.of());
+    }
+
+    @ExceptionHandler(NotFoundException.class)
+    ResponseEntity<ApiError> handleNotFound(NotFoundException exception) {
+        return response(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "资源不存在", Map.of());
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    ResponseEntity<ApiError> handleBusinessConflict(ConflictException exception) {
+        return response(HttpStatus.CONFLICT, exception.code(), exception.getMessage(), Map.of());
+    }
+
+    @ExceptionHandler(InvalidInputException.class)
+    ResponseEntity<ApiError> handleInvalidInput(InvalidInputException exception) {
+        return response(HttpStatus.BAD_REQUEST, exception.code(), exception.getMessage(), Map.of());
     }
 
     @ExceptionHandler(RateLimitExceededException.class)
@@ -93,6 +118,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiError> handleUnexpected(Exception exception) {
+        log.error("Unhandled exception while processing request", exception);
         return response(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "系统暂时不可用", Map.of());
     }
 
