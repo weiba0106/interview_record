@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +40,7 @@ public class ScheduleService {
     private final ReminderService reminders;
     private final Clock clock;
 
+    @Autowired
     public ScheduleService(JpaScheduleEventRepository schedules, JpaPositionRepository positions,
             JpaInterviewRoundRepository rounds, ReminderService reminders, Clock clock) {
         this.schedules = schedules; this.positions = positions; this.rounds = rounds;

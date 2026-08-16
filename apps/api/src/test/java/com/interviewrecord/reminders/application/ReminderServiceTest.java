@@ -102,8 +102,10 @@ class ReminderServiceTest {
         user.verify(NOW);
         UserPreference preference = new UserPreference(user, "UTC", NOW);
         given(preferences.requireByUserId(1L)).willReturn(preference);
-        return new ReminderService(reminders, preferences,
-                org.mockito.Mockito.mock(com.interviewrecord.scheduling.infrastructure.JpaScheduleEventRepository.class),
+        var schedules = org.mockito.Mockito.mock(com.interviewrecord.scheduling.infrastructure.JpaScheduleEventRepository.class);
+        ScheduleEvent activeSchedule = event("INTERVIEW", NOW.plusSeconds(3600));
+        given(schedules.findByIdAndUserId(9L, 1L)).willReturn(java.util.Optional.of(activeSchedule));
+        return new ReminderService(reminders, preferences, schedules,
                 mail, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
