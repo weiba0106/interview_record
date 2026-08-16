@@ -44,6 +44,7 @@ describe('PositionsView', () => {
   beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
   beforeEach(() => {
     capturedUrls.length = 0
+    sessionStorage.clear()
     server.use(
       http.get('/api/v1/companies', () => HttpResponse.json(companies)),
       http.get('/api/v1/job-types', () => HttpResponse.json(jobTypes)),
@@ -108,5 +109,43 @@ describe('PositionsView', () => {
     expect(wrapper.get('[data-action="view-board"]').attributes('aria-pressed')).toBe('true')
     expect(wrapper.get('.positions-board').text()).toContain('后端开发工程师')
     expect(wrapper.get('[data-status-column="31"]').text()).toContain('投递中')
+  })
+
+  it('forwards applied date range and next-schedule sort to the search endpoint', async () => {
+    const wrapper = mount(PositionsView, { global: { plugins: [createPinia(), ElementPlus] } })
+    await vi.waitFor(() => expect(wrapper.find('[data-testid="position-101"]').exists()).toBe(true))
+
+    await wrapper.get('[data-action="toggle-advanced-filters"]').trigger('click')
+    await wrapper.get('input[name="filterAppliedFrom"]').setValue('2026-08-01')
+    await wrapper.get('input[name="filterAppliedTo"]').setValue('2026-08-31')
+    const selects = wrapper.findAllComponents({ name: 'ElSelect' })
+    selects[3]!.vm.$emit('update:modelValue', 'nextSchedule')
+    await wrapper.get('form.filter-bar').trigger('submit.prevent')
+
+    await vi.waitFor(() => expect(capturedUrls.length).toBeGreaterThanOrEqual(2))
+    const filtered = new URL(capturedUrls[capturedUrls.length - 1]!)
+    expect(filtered.searchParams.get('appliedFrom')).toBe('2026-08-01')
+    expect(filtered.searchParams.get('appliedTo')).toBe('2026-08-31')
+    expect(filtered.searchParams.get('sortBy')).toBe('nextSchedule')
+  })
+
+  it('keeps filter conditions within the current session', async () => {
+    const mountView = () => mount(PositionsView, { global: { plugins: [createPinia(), ElementPlus] } })
+    const first = mountView()
+    await vi.waitFor(() => expect(first.find('[data-testid="position-101"]').exists()).toBe(true))
+
+    await first.get('input[name="filterKeyword"]').setValue('后端')
+    await first.get('[data-action="toggle-advanced-filters"]').trigger('click')
+    await first.get('input[name="filterAppliedFrom"]').setValue('2026-07-01')
+    await first.get('form.filter-bar').trigger('submit.prevent')
+    await vi.waitFor(() => expect(capturedUrls.length).toBeGreaterThanOrEqual(2))
+    first.unmount()
+
+    const second = mountView()
+    await vi.waitFor(() => expect(second.find('[data-testid="position-101"]').exists()).toBe(true))
+    await second.get('[data-action="toggle-advanced-filters"]').trigger('click')
+
+    expect((second.get('input[name="filterKeyword"]').element as HTMLInputElement).value).toBe('后端')
+    expect((second.get('input[name="filterAppliedFrom"]').element as HTMLInputElement).value).toBe('2026-07-01')
   })
 })

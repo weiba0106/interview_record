@@ -24,11 +24,38 @@ const filters = reactive<PositionSearchParams>({
   statusId: '',
   archived: false,
   keyword: '',
+  appliedFrom: '',
+  appliedTo: '',
   page: 0,
   size: 20,
   sortBy: 'updatedAt',
   sortDir: 'desc',
 })
+
+/** 会话内保留筛选条件（PRD §7.3.2），不包含分页状态。 */
+const FILTER_STORAGE_KEY = 'interview-record.positions.filters.v1'
+const persistedFilters = ['companyId', 'jobTypeId', 'statusId', 'archived', 'keyword', 'appliedFrom', 'appliedTo', 'sortBy', 'sortDir'] as const
+
+function restorePersistedFilters() {
+  try {
+    const raw = sessionStorage.getItem(FILTER_STORAGE_KEY)
+    if (!raw) return
+    const saved = JSON.parse(raw) as Record<string, unknown>
+    for (const key of persistedFilters) {
+      if (key in saved) {
+        ;(filters as unknown as Record<string, unknown>)[key] = saved[key]
+      }
+    }
+  } catch { /* 会话存储不可用或数据损坏时忽略，退回默认筛选 */ }
+}
+
+function persistFilters() {
+  try {
+    const snapshot: Record<string, unknown> = {}
+    for (const key of persistedFilters) snapshot[key] = (filters as unknown as Record<string, unknown>)[key]
+    sessionStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(snapshot))
+  } catch { /* 会话存储不可用时静默降级 */ }
+}
 
 const deleteTarget = ref<Position | null>(null)
 const pendingDelete = ref(false)
@@ -55,6 +82,7 @@ async function search(resetPage = false) {
   if (resetPage) filters.page = 0
   loading.value = true
   error.value = ''
+  persistFilters()
   try {
     result.value = await searchPositions(filters)
   } catch (caught) {
@@ -65,6 +93,7 @@ async function search(resetPage = false) {
 }
 
 onMounted(async () => {
+  restorePersistedFilters()
   await loadOptions()
   await search()
 })
@@ -77,6 +106,9 @@ function resetFilters() {
   filters.statusId = ''
   filters.archived = false
   filters.keyword = ''
+  filters.appliedFrom = ''
+  filters.appliedTo = ''
+  try { sessionStorage.removeItem(FILTER_STORAGE_KEY) } catch { /* 忽略存储不可用 */ }
   void search(true)
 }
 
@@ -184,10 +216,14 @@ async function confirmDelete() {
         <div v-if="advancedOpen" class="filter-advanced">
           <label class="archived-filter"><input v-model="filters.archived" name="filterArchived" type="checkbox" /> 只看已归档</label>
           <span class="advanced-divider" aria-hidden="true" />
+          <label class="date-filter">投递开始<input v-model="filters.appliedFrom" name="filterAppliedFrom" type="date" /></label>
+          <label class="date-filter">投递结束<input v-model="filters.appliedTo" name="filterAppliedTo" type="date" /></label>
+          <span class="advanced-divider" aria-hidden="true" />
           <ElSelect v-model="filters.sortBy" name="sortBy" class="sort-select" aria-label="排序字段">
             <ElOption label="按最近更新" value="updatedAt" />
             <ElOption label="按投递日期" value="appliedAt" />
             <ElOption label="按截止日期" value="deadlineAt" />
+            <ElOption label="按下次日程" value="nextSchedule" />
           </ElSelect>
           <ElButton :data-action="'toggle-sort-dir'" @click="toggleSortDirection">
             <ElIcon><component :is="filters.sortDir === 'desc' ? ArrowDown : ArrowUp" /></ElIcon>
@@ -325,6 +361,15 @@ async function confirmDelete() {
   color: var(--ir-muted);
   font-size: 13px;
 }
+.date-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ir-muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.date-filter input { width: 140px; }
 .sort-select { width: 150px; }
 .positions-loading {
   margin: 0;

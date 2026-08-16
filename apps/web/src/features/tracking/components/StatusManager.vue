@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { ElButton, ElDialog, ElInput, ElOption, ElSelect, ElTag } from 'element-plus'
-import { createStatus, deleteStatus, listStatuses, updateStatus } from '../api/statuses.api'
+import { createStatus, deleteStatus, listStatuses, reorderStatuses, updateStatus } from '../api/statuses.api'
 import type { PositionStatus, StatusRequest } from '../api/tracking.types'
 import { isApiRequestError } from '@/shared/api/error'
 
@@ -99,6 +99,23 @@ async function confirmDelete() {
     error.value = isApiRequestError(caught) ? caught.apiError.message : '删除失败，请稍后重试'
   }
 }
+
+/** 状态排序：按当前展示顺序移动一项后整体提交 orderedIds。 */
+async function moveStatus(status: PositionStatus, direction: -1 | 1) {
+  const ordered = [...statuses.value]
+  const index = ordered.findIndex((item) => item.id === status.id)
+  const target = index + direction
+  if (index < 0 || target < 0 || target >= ordered.length) return
+  error.value = ''
+  const [moved] = ordered.splice(index, 1)
+  ordered.splice(target, 0, moved!)
+  try {
+    statuses.value = await reorderStatuses(ordered.map((item) => item.id))
+  } catch (caught) {
+    error.value = isApiRequestError(caught) ? caught.apiError.message : '调整状态顺序失败，请稍后重试'
+    await load()
+  }
+}
 </script>
 
 <template>
@@ -116,6 +133,8 @@ async function confirmDelete() {
         <ElTag v-if="!status.active" size="small" type="warning">已停用</ElTag>
         <span class="status-count">{{ status.positionCount }} 个岗位</span>
         <span class="item-actions">
+          <ElButton size="small" text :data-action="`move-status-up-${status.id}`" :disabled="statuses[0]?.id === status.id" :aria-label="`上移 ${status.name}`" @click="moveStatus(status, -1)">↑</ElButton>
+          <ElButton size="small" text :data-action="`move-status-down-${status.id}`" :disabled="statuses[statuses.length - 1]?.id === status.id" :aria-label="`下移 ${status.name}`" @click="moveStatus(status, 1)">↓</ElButton>
           <ElButton size="small" text :data-action="`edit-status-${status.id}`" @click="openEdit(status)">编辑</ElButton>
           <ElButton size="small" text type="danger" :data-action="`delete-status-${status.id}`" @click="openDelete(status)">删除</ElButton>
         </span>

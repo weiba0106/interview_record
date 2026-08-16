@@ -174,6 +174,7 @@ async function confirmDelete() {
           <li>{{ deleteDetail.positions.length }} 个岗位</li>
           <li>{{ deleteDetail.interviewRoundCount }} 条面试轮次记录</li>
           <li>{{ deleteDetail.scheduleCount }} 条关联日程</li>
+          <li>{{ deleteDetail.shareLinkCount }} 条分享链接（删除后立即失效）</li>
         </ul>
       </div>
       <template #footer>

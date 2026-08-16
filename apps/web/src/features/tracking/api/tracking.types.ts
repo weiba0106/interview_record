@@ -25,6 +25,7 @@ export interface PositionSummary {
 export interface CompanyDetail extends Company {
   interviewRoundCount: number
   scheduleCount: number
+  shareLinkCount: number
   positions: PositionSummary[]
 }
 
@@ -124,6 +125,9 @@ export interface PositionSearchParams {
   statusId?: string
   archived?: boolean
   keyword?: string
+  /** 投递日期范围（YYYY-MM-DD） */
+  appliedFrom?: string
+  appliedTo?: string
   page?: number
   size?: number
   sortBy?: string
