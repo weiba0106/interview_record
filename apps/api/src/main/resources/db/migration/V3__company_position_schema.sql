@@ -1,0 +1,40 @@
+CREATE TABLE companies (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    name VARCHAR(120) NOT NULL,
+    website VARCHAR(2048) NULL,
+    notes VARCHAR(2000) NULL,
+    created_at DATETIME(6) NOT NULL,
+    updated_at DATETIME(6) NOT NULL,
+    PRIMARY KEY (id),
+    KEY ix_companies_user (user_id),
+    CONSTRAINT fk_companies_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE positions (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    company_id BIGINT NOT NULL,
+    job_type_id BIGINT NOT NULL,
+    status_id BIGINT NOT NULL,
+    title VARCHAR(100) NOT NULL,
+    apply_url VARCHAR(2048) NULL,
+    applied_at DATE NULL,
+    deadline_at DATETIME(6) NULL,
+    work_location VARCHAR(100) NULL,
+    description VARCHAR(2000) NULL,
+    archived BOOLEAN NOT NULL DEFAULT FALSE,
+    version BIGINT NOT NULL DEFAULT 0,
+    created_at DATETIME(6) NOT NULL,
+    updated_at DATETIME(6) NOT NULL,
+    PRIMARY KEY (id),
+    KEY ix_positions_user_updated (user_id, updated_at),
+    KEY ix_positions_user_applied (user_id, applied_at),
+    KEY ix_positions_company (company_id),
+    KEY ix_positions_user_status (user_id, status_id),
+    KEY ix_positions_user_job_type (user_id, job_type_id),
+    CONSTRAINT fk_positions_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_positions_company FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+    CONSTRAINT fk_positions_job_type FOREIGN KEY (job_type_id) REFERENCES job_types(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_positions_status FOREIGN KEY (status_id) REFERENCES position_statuses(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
