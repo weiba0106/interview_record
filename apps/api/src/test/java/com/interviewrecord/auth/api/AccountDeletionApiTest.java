@@ -35,6 +35,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @Import({SecurityConfig.class, GlobalExceptionHandler.class, JsonAccessDeniedHandler.class, JsonAuthenticationEntryPoint.class,
         CurrentUser.class})
 class AccountDeletionApiTest {
+    @MockitoBean com.interviewrecord.auth.infrastructure.JpaUserRepository jpaUserRepository;
+    @MockitoBean org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     @Autowired MockMvc mvc;
     @MockitoBean AccountDeletionService accountDeletionService;
     @MockitoBean com.interviewrecord.preference.application.PreferenceService preferenceService;

@@ -42,6 +42,8 @@ import org.springframework.test.web.servlet.MvcResult;
 @Import({SecurityConfig.class, GlobalExceptionHandler.class, JsonAccessDeniedHandler.class, JsonAuthenticationEntryPoint.class,
         CurrentUser.class})
 class LoginSessionApiTest {
+    @MockitoBean com.interviewrecord.auth.infrastructure.JpaUserRepository jpaUserRepository;
+    @MockitoBean org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     private static final AuthenticatedUser VERIFIED_USER = new AuthenticatedUser(
             42L, "user@example.com", "小林", true, "Asia/Shanghai", Theme.GRAPHITE_CORAL);
 

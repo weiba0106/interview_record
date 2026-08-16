@@ -19,7 +19,7 @@ class MigrationTest extends MySqlIntegrationTestBase {
 
     @Test
     void appliesAccountAndSessionMigrations() {
-        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("5");
+        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("7");
 
         Integer users = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM information_schema.tables "
@@ -37,7 +37,7 @@ class MigrationTest extends MySqlIntegrationTestBase {
     @Test
     void appliesCompanyPositionInterviewAndScheduleMigrations() {
         for (String table : new String[] {"companies", "positions", "interview_rounds",
-                "interview_questions", "schedule_events"}) {
+                "interview_questions", "schedule_events", "reminders", "share_links", "share_rounds"}) {
             Integer count = jdbc.queryForObject(
                     "SELECT COUNT(*) FROM information_schema.tables "
                             + "WHERE table_schema = DATABASE() AND table_name = ?",

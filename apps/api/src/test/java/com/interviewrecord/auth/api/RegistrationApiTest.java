@@ -35,6 +35,8 @@ import org.springframework.test.web.servlet.MockMvc;
 @ImportAutoConfiguration(exclude = {SecurityAutoConfiguration.class, ServletWebSecurityAutoConfiguration.class})
 @Import({SecurityConfig.class, GlobalExceptionHandler.class, JsonAccessDeniedHandler.class, JsonAuthenticationEntryPoint.class})
 class RegistrationApiTest {
+    @MockitoBean com.interviewrecord.auth.infrastructure.JpaUserRepository jpaUserRepository;
+    @MockitoBean org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     @Autowired MockMvc mvc;
     @MockitoBean RegistrationService registrationService;
     @MockitoBean EmailVerificationService emailVerificationService;
