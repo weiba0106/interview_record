@@ -1,4 +1,9 @@
 .superpowers/
 .worktrees/
 .env
+node_modules/
 apps/api/target/
+
+# 本地 IDE/智能体工具目录，不进入版本库
+.qoder/
+.trae/
