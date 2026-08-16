@@ -3,6 +3,7 @@ package com.interviewrecord.interviews.application;
 import com.interviewrecord.common.error.ConflictException;
 import com.interviewrecord.common.error.InvalidInputException;
 import com.interviewrecord.common.error.NotFoundException;
+import com.interviewrecord.common.html.RichTextSanitizer;
 import com.interviewrecord.interviews.api.InterviewDtos.QuestionResponse;
 import com.interviewrecord.interviews.api.InterviewDtos.RoundRequest;
 import com.interviewrecord.interviews.api.InterviewDtos.RoundResponse;
@@ -30,13 +31,15 @@ public class InterviewService {
     private final JpaPositionRepository positions;
     private final JpaCompanyRepository companies;
     private final ScheduleService scheduleService;
+    private final RichTextSanitizer sanitizer;
     private final Clock clock;
 
     public InterviewService(JpaInterviewRoundRepository rounds, JpaInterviewQuestionRepository questions,
             JpaPositionRepository positions, JpaCompanyRepository companies,
-            ScheduleService scheduleService, Clock clock) {
+            ScheduleService scheduleService, RichTextSanitizer sanitizer, Clock clock) {
         this.rounds = rounds; this.questions = questions; this.positions = positions;
-        this.companies = companies; this.scheduleService = scheduleService; this.clock = clock;
+        this.companies = companies; this.scheduleService = scheduleService;
+        this.sanitizer = sanitizer; this.clock = clock;
     }
 
     @Transactional(readOnly = true)
@@ -60,7 +63,7 @@ public class InterviewService {
         InterviewRound round = rounds.save(new InterviewRound(userId, position.id(),
                 request.roundName().trim(), request.roundNumber(), request.interviewType(),
                 request.startsAt(), request.endsAt(), blankToNull(request.location()), request.result(),
-                blankToNull(request.processNotes()), blankToNull(request.reviewSummary()), now));
+                sanitized(request.processNotes()), sanitized(request.reviewSummary()), now));
         replaceQuestions(userId, round.id(), request);
         if (Boolean.TRUE.equals(request.createSchedule()) && round.startsAt() != null) {
             scheduleService.createLinked(userId, scheduleTitle(userId, position, round), "INTERVIEW",
@@ -79,7 +82,7 @@ public class InterviewService {
         requireRoundNumberAvailable(userId, round.positionId(), request.roundNumber(), roundId);
         round.update(request.roundName().trim(), request.roundNumber(), request.interviewType(),
                 request.startsAt(), request.endsAt(), blankToNull(request.location()), request.result(),
-                blankToNull(request.processNotes()), blankToNull(request.reviewSummary()), clock.instant());
+                sanitized(request.processNotes()), sanitized(request.reviewSummary()), clock.instant());
         replaceQuestions(userId, round.id(), request);
         scheduleService.syncFromRound(userId, round);
         return toResponse(userId, round);
@@ -159,7 +162,12 @@ public class InterviewService {
         return new RoundResponse(Long.toString(round.id()), Long.toString(round.positionId()),
                 position == null ? "" : position.title(), companyName, round.roundName(), round.roundNumber(),
                 round.interviewType(), round.startsAt(), round.endsAt(), round.location(), round.result(),
-                round.processNotes(), round.reviewSummary(), questionItems, scheduleIds,
+                sanitizer.sanitize(round.processNotes()), sanitizer.sanitize(round.reviewSummary()),
+                questionItems, scheduleIds,
                 round.version(), round.createdAt(), round.updatedAt());
+    }
+
+    private String sanitized(String html) {
+        return sanitizer.sanitize(html);
     }
 }

@@ -24,8 +24,9 @@ public final class InterviewDtos {
             Instant endsAt,
             @Size(max = 500) String location,
             @NotBlank String result,
-            @Size(max = 4000) String processNotes,
-            @Size(max = 4000) String reviewSummary,
+            /** 富文本 HTML，服务端白名单清洗后存储。 */
+            @Size(max = 50000) String processNotes,
+            @Size(max = 50000) String reviewSummary,
             List<@Valid QuestionItem> questions,
             Boolean createSchedule,
             Long version) {}

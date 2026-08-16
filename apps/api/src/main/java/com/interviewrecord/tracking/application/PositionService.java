@@ -3,6 +3,7 @@ package com.interviewrecord.tracking.application;
 import com.interviewrecord.common.error.ConflictException;
 import com.interviewrecord.common.error.InvalidInputException;
 import com.interviewrecord.common.error.NotFoundException;
+import com.interviewrecord.common.html.RichTextSanitizer;
 import com.interviewrecord.interviews.infrastructure.JpaInterviewRoundRepository;
 import com.interviewrecord.scheduling.application.ScheduleService;
 import com.interviewrecord.scheduling.domain.ScheduleEvent;
@@ -47,15 +48,16 @@ public class PositionService {
     private final JpaInterviewRoundRepository rounds;
     private final JpaScheduleEventRepository schedules;
     private final ScheduleService scheduleService;
+    private final RichTextSanitizer sanitizer;
     private final Clock clock;
 
     public PositionService(JpaPositionRepository positions, JpaCompanyRepository companies,
             JpaManagedJobTypeRepository jobTypes, JpaManagedPositionStatusRepository statuses,
             JpaInterviewRoundRepository rounds, JpaScheduleEventRepository schedules,
-            ScheduleService scheduleService, Clock clock) {
+            ScheduleService scheduleService, RichTextSanitizer sanitizer, Clock clock) {
         this.positions = positions; this.companies = companies; this.jobTypes = jobTypes;
         this.statuses = statuses; this.rounds = rounds; this.schedules = schedules;
-        this.scheduleService = scheduleService; this.clock = clock;
+        this.scheduleService = scheduleService; this.sanitizer = sanitizer; this.clock = clock;
     }
 
     @Transactional(readOnly = true)
@@ -92,7 +94,7 @@ public class PositionService {
         Instant now = clock.instant();
         Position position = new Position(userId, company.id(), jobType.id(), status.id(),
                 request.title().trim(), blankToNull(request.applyUrl()), request.appliedAt(),
-                request.deadlineAt(), blankToNull(request.workLocation()), blankToNull(request.description()), now);
+                request.deadlineAt(), blankToNull(request.workLocation()), sanitized(request.description()), now);
         Position saved = positions.save(position);
         if (Boolean.TRUE.equals(request.createDeadlineSchedule()) && saved.deadlineAt() != null) {
             scheduleService.createLinked(userId, "投递截止：" + company.name() + " " + saved.title(),
@@ -117,7 +119,7 @@ public class PositionService {
         requireSafeUrl(request.applyUrl());
         position.update(company.id(), jobType.id(), status.id(), request.title().trim(),
                 blankToNull(request.applyUrl()), request.appliedAt(), request.deadlineAt(),
-                blankToNull(request.workLocation()), blankToNull(request.description()), clock.instant());
+                blankToNull(request.workLocation()), sanitized(request.description()), clock.instant());
         return enrich(userId, List.of(position)).get(0);
     }
 
@@ -223,7 +225,7 @@ public class PositionService {
                     Long.toString(position.companyId()), company == null ? "" : company.name(),
                     Long.toString(position.jobTypeId()), jobType == null ? "" : jobType.name(),
                     statusRefs.get(position.statusId()), position.applyUrl(), position.appliedAt(),
-                    position.deadlineAt(), position.workLocation(), position.description(),
+                    position.deadlineAt(), position.workLocation(), sanitizer.sanitize(position.description()),
                     position.archived(), roundCounts.getOrDefault(position.id(), 0L),
                     scheduleCounts.getOrDefault(position.id(), 0L),
                     next == null ? null : new NextScheduleRef(Long.toString(next.id()), next.title(),
@@ -257,5 +259,10 @@ public class PositionService {
 
     private String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    /** 写入路径的白名单清洗；读出时（enrich）对历史数据再清洗兜底。 */
+    private String sanitized(String html) {
+        return sanitizer.sanitize(html);
     }
 }

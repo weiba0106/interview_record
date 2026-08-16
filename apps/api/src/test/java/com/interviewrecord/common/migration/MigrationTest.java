@@ -19,7 +19,7 @@ class MigrationTest extends MySqlIntegrationTestBase {
 
     @Test
     void appliesAccountAndSessionMigrations() {
-        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("8");
+        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("9");
 
         Integer users = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM information_schema.tables "
@@ -62,6 +62,16 @@ class MigrationTest extends MySqlIntegrationTestBase {
                         + " AND table_name = 'schedule_events' AND column_name = 'reminder_offsets'",
                 Integer.class);
         assertThat(reminderOffsetsColumn).isEqualTo(1);
+
+        for (String[] richTextColumn : new String[][] {
+                {"positions", "description"}, {"interview_rounds", "process_notes"},
+                {"interview_rounds", "review_summary"}}) {
+            Integer longText = jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE()"
+                            + " AND table_name = ? AND column_name = ? AND data_type = 'longtext'",
+                    Integer.class, richTextColumn[0], richTextColumn[1]);
+            assertThat(longText).as("longtext %s.%s", richTextColumn[0], richTextColumn[1]).isEqualTo(1);
+        }
     }
 
     @Test

@@ -23,7 +23,8 @@ public class Position {
     @Column(name = "applied_at") private LocalDate appliedAt;
     @Column(name = "deadline_at") private Instant deadlineAt;
     @Column(name = "work_location", length = 100) private String workLocation;
-    @Column(length = 2000) private String description;
+    /** 富文本（服务端白名单清洗后存储），V9 起为 LONGTEXT。 */
+    @Column(columnDefinition = "LONGTEXT") private String description;
     @Column(nullable = false) private boolean archived;
     @Version private long version;
     @Column(name = "created_at", nullable = false, updatable = false) private Instant createdAt;

@@ -26,8 +26,9 @@ public class InterviewRound {
     @Column(name = "ends_at") private Instant endsAt;
     @Column(length = 500) private String location;
     @Column(nullable = false, length = 20) private String result;
-    @Column(name = "process_notes", length = 4000) private String processNotes;
-    @Column(name = "review_summary", length = 4000) private String reviewSummary;
+    /** 富文本字段（服务端白名单清洗后存储），V9 起为 LONGTEXT。 */
+    @Column(name = "process_notes", columnDefinition = "LONGTEXT") private String processNotes;
+    @Column(name = "review_summary", columnDefinition = "LONGTEXT") private String reviewSummary;
     @Version private long version;
     @Column(name = "created_at", nullable = false, updatable = false) private Instant createdAt;
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;

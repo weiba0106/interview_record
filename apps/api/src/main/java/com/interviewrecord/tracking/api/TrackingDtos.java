@@ -56,7 +56,8 @@ public final class TrackingDtos {
             LocalDate appliedAt,
             Instant deadlineAt,
             @Size(max = 100) String workLocation,
-            @Size(max = 2000) String description,
+            /** 富文本 HTML，服务端白名单清洗后存储。 */
+            @Size(max = 50000) String description,
             Boolean createDeadlineSchedule,
             Long version) {}
 
