@@ -1,5 +1,11 @@
 import { request } from '@/shared/api/http'
 
+export interface ReminderState {
+  scheduledAt: string
+  status: string
+  sentAt: string | null
+}
+
 export interface Schedule {
   id: string
   title: string
@@ -18,6 +24,9 @@ export interface Schedule {
   referenceTime: string
   version: number
   updatedAt: string
+  /** null=跟随默认规则；[]=关闭提醒；非空=自定义提醒分钟数 */
+  reminderOffsets: number[] | null
+  reminders: ReminderState[]
 }
 
 export interface ScheduleRequest {
@@ -29,6 +38,8 @@ export interface ScheduleRequest {
   interviewRoundId?: string | null
   location?: string | null
   notes?: string | null
+  /** null/缺省=跟随默认规则；[]=关闭提醒；非空=自定义提醒分钟数 */
+  reminderOffsets?: number[] | null
   version?: number | null
 }
 
@@ -85,6 +96,13 @@ export async function changeScheduleStatus(id: string, status: string): Promise<
 export async function overrideScheduleUrgency(id: string, urgency: string | null): Promise<Schedule> {
   return (
     await request<Schedule>({ method: 'patch', url: `/schedules/${id}/urgency`, data: { urgency } })
+  ).data
+}
+
+/** null=恢复默认规则；[]=关闭提醒；非空=自定义提醒时间（分钟） */
+export async function updateScheduleReminders(id: string, offsets: number[] | null): Promise<Schedule> {
+  return (
+    await request<Schedule>({ method: 'put', url: `/schedules/${id}/reminders`, data: { offsets } })
   ).data
 }
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElButton, ElDialog, ElOption, ElSelect } from 'element-plus'
+import { ElButton, ElDialog, ElInput, ElOption, ElSelect } from 'element-plus'
 import ScheduleForm from '@/features/scheduling/components/ScheduleForm.vue'
 import {
   changeScheduleStatus,
@@ -11,6 +11,7 @@ import {
   overrideScheduleUrgency,
   scheduleEventTypeLabel,
   updateSchedule,
+  updateScheduleReminders,
   type Schedule,
   type ScheduleRequest,
 } from '@/features/scheduling/api/schedules.api'
@@ -33,6 +34,13 @@ const editing = ref<Schedule | null>(null)
 const deleteTarget = ref<Schedule | null>(null)
 const pendingRequest = ref(false)
 
+const reminderDialogOpen = ref(false)
+const reminderTarget = ref<Schedule | null>(null)
+const reminderMode = ref<'AUTO' | 'DISABLED' | 'CUSTOM'>('AUTO')
+const reminderInput = ref('')
+const reminderError = ref('')
+const reminderSaving = ref(false)
+
 const sortedSchedules = computed(() => sortByUrgency(schedules.value))
 const groupedSchedules = computed(() => {
   const groups: Array<{ label: string; items: Schedule[] }> = []
@@ -44,6 +52,68 @@ const groupedSchedules = computed(() => {
   }
   return groups
 })
+
+function failedReminderCount(schedule: Schedule): number {
+  return (schedule.reminders ?? []).filter((item) => item.status === 'FAILED').length
+}
+
+function reminderSummary(schedule: Schedule): string {
+  const offsets = schedule.reminderOffsets
+  if (offsets === null || offsets === undefined) return '默认规则'
+  if (offsets.length === 0) return '已关闭'
+  return `提前 ${offsets.join('、')} 分钟`
+}
+
+function openReminderDialog(schedule: Schedule) {
+  reminderTarget.value = schedule
+  reminderError.value = ''
+  const offsets = schedule.reminderOffsets
+  if (offsets === null || offsets === undefined) {
+    reminderMode.value = 'AUTO'
+    reminderInput.value = ''
+  } else if (offsets.length === 0) {
+    reminderMode.value = 'DISABLED'
+    reminderInput.value = ''
+  } else {
+    reminderMode.value = 'CUSTOM'
+    reminderInput.value = offsets.join(', ')
+  }
+  reminderDialogOpen.value = true
+}
+
+async function saveReminders() {
+  if (!reminderTarget.value || reminderSaving.value) return
+  reminderError.value = ''
+  let offsets: number[] | null
+  if (reminderMode.value === 'AUTO') {
+    offsets = null
+  } else if (reminderMode.value === 'DISABLED') {
+    offsets = []
+  } else {
+    const parsed = reminderInput.value.split(',').map((part) => Number(part.trim()))
+    if (parsed.some((offset) => !Number.isInteger(offset) || offset < 0 || offset > 10080)) {
+      reminderError.value = '提醒时间必须是 0 到 10080 之间的整数分钟'
+      return
+    }
+    if (new Set(parsed).size > 5) {
+      reminderError.value = '单条日程最多设置 5 个提醒时间'
+      return
+    }
+    offsets = [...new Set(parsed)]
+  }
+  reminderSaving.value = true
+  error.value = ''; message.value = ''
+  try {
+    const updated = await updateScheduleReminders(reminderTarget.value.id, offsets)
+    schedules.value = schedules.value.map((item) => (item.id === updated.id ? updated : item))
+    message.value = '提醒设置已更新'
+    reminderDialogOpen.value = false
+  } catch (caught) {
+    reminderError.value = isApiRequestError(caught) ? caught.apiError.message : '保存提醒设置失败，请稍后重试'
+  } finally {
+    reminderSaving.value = false
+  }
+}
 
 async function load() {
   loading.value = true
@@ -197,6 +267,10 @@ async function confirmDelete() {
               </p>
               <p v-if="schedule.positionTitle" class="event-meta">岗位：{{ schedule.positionTitle }}<template v-if="schedule.location"> · 形式/地点：{{ schedule.location }}</template></p>
               <p v-if="schedule.status === 'PENDING'" class="event-meta event-countdown">{{ urgencyCountdown(schedule) }}</p>
+              <p v-if="failedReminderCount(schedule) > 0" class="reminder-warning" role="status" :data-testid="`reminder-failed-${schedule.id}`">
+                ⚠ 邮件提醒发送失败（{{ failedReminderCount(schedule) }} 条），已停止重试，请检查邮箱后编辑日程重新触发。
+              </p>
+              <p class="reminder-config" :data-testid="`reminder-config-${schedule.id}`">提醒：{{ reminderSummary(schedule) }}</p>
               <div class="event-actions">
                 <ElSelect
                   v-if="schedule.status === 'PENDING'"
@@ -214,6 +288,7 @@ async function confirmDelete() {
                 <ElButton v-if="schedule.status === 'PENDING'" size="small" :data-action="`complete-${schedule.id}`" @click="setStatus(schedule, 'COMPLETED')">完成</ElButton>
                 <ElButton v-if="schedule.status === 'PENDING'" size="small" text :data-action="`cancel-${schedule.id}`" @click="setStatus(schedule, 'CANCELLED')">取消</ElButton>
                 <ElButton v-else size="small" :data-action="`reopen-${schedule.id}`" @click="setStatus(schedule, 'PENDING')">恢复待处理</ElButton>
+                <ElButton size="small" text :data-action="`reminders-${schedule.id}`" @click="openReminderDialog(schedule)">提醒</ElButton>
                 <ElButton size="small" text :data-action="`edit-${schedule.id}`" @click="openEdit(schedule)">编辑</ElButton>
                 <ElButton size="small" text type="danger" :data-action="`delete-${schedule.id}`" @click="deleteTarget = schedule">删除</ElButton>
               </div>
@@ -239,6 +314,35 @@ async function confirmDelete() {
       <template #footer>
         <ElButton @click="deleteTarget = null">取消</ElButton>
         <ElButton type="danger" data-action="confirm-delete-schedule" :loading="pendingRequest" @click="confirmDelete">删除</ElButton>
+      </template>
+    </ElDialog>
+
+    <ElDialog v-model="reminderDialogOpen" :title="`提醒设置 · ${reminderTarget?.title ?? ''}`" width="min(94vw, 460px)" :teleported="false">
+      <div class="reminder-dialog" role="radiogroup" aria-label="提醒方式">
+        <label class="reminder-option">
+          <input v-model="reminderMode" type="radio" name="reminderMode" value="AUTO" />
+          <span><strong>使用默认规则</strong><small>按偏好设置自动提醒</small></span>
+        </label>
+        <label class="reminder-option">
+          <input v-model="reminderMode" type="radio" name="reminderMode" value="CUSTOM" />
+          <span><strong>自定义提醒时间</strong><small>提前多少分钟提醒，多个时间用逗号分隔</small></span>
+        </label>
+        <ElInput
+          v-if="reminderMode === 'CUSTOM'"
+          v-model="reminderInput"
+          name="reminderOffsets"
+          placeholder="例如 1440, 30"
+          aria-label="自定义提醒时间（分钟，逗号分隔）"
+        />
+        <label class="reminder-option">
+          <input v-model="reminderMode" type="radio" name="reminderMode" value="DISABLED" />
+          <span><strong>关闭提醒</strong><small>这条日程不再发送邮件</small></span>
+        </label>
+      </div>
+      <p v-if="reminderError" role="alert">{{ reminderError }}</p>
+      <template #footer>
+        <ElButton @click="reminderDialogOpen = false">取消</ElButton>
+        <ElButton type="primary" data-action="save-reminders" :loading="reminderSaving" @click="saveReminders">保存提醒设置</ElButton>
       </template>
     </ElDialog>
   </main>
@@ -273,6 +377,41 @@ async function confirmDelete() {
   vertical-align: 1px;
 }
 .urgency-select { width: 96px; }
+.reminder-config {
+  margin: 0;
+  color: var(--ir-faint);
+  font-size: 11.5px;
+}
+.reminder-warning {
+  margin: 0;
+  padding: 7px 10px;
+  border-radius: var(--ir-radius-sm);
+  color: #9f2d35;
+  background: color-mix(in srgb, var(--ir-danger), white 92%);
+  border: 1px solid color-mix(in srgb, var(--ir-danger), transparent 72%);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.reminder-dialog { display: grid; gap: 10px; }
+.reminder-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--ir-border);
+  border-radius: var(--ir-radius-sm);
+  cursor: pointer;
+  transition: border-color var(--ir-transition), background-color var(--ir-transition);
+}
+.reminder-option:hover { border-color: var(--ir-border-strong); }
+.reminder-option:has(input:checked) {
+  border-color: var(--ir-primary-strong);
+  background: var(--ir-primary-soft);
+}
+.reminder-option input { margin-top: 3px; }
+.reminder-option strong, .reminder-option small { display: block; }
+.reminder-option strong { font-size: 13px; }
+.reminder-option small { color: var(--ir-muted); font-size: 11.5px; margin-top: 2px; }
 @media (max-width: 480px) {
   .event-actions { width: 100%; }
   .urgency-select { flex: 1; }

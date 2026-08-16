@@ -242,6 +242,7 @@ async function setStatus(schedule: Schedule, status: 'COMPLETED' | 'CANCELLED') 
                   <p class="event-meta">{{ scheduleEventTypeLabel(schedule.eventType) }} · {{ formatDateTime(schedule.startsAt ?? schedule.endsAt) }}</p>
                   <p v-if="schedule.positionTitle" class="event-meta">岗位：{{ schedule.positionTitle }}</p>
                   <p class="event-meta event-countdown">{{ urgencyCountdown(schedule) }}</p>
+                  <p v-if="(schedule.reminders ?? []).some((item) => item.status === 'FAILED')" class="event-meta reminder-failed">⚠ 邮件提醒发送失败</p>
                   <div class="event-actions">
                     <ElButton size="small" :data-action="`complete-${schedule.id}`" @click="setStatus(schedule, 'COMPLETED')">完成</ElButton>
                     <ElButton size="small" text :data-action="`cancel-${schedule.id}`" @click="setStatus(schedule, 'CANCELLED')">取消</ElButton>
@@ -298,6 +299,10 @@ async function setStatus(schedule: Schedule, status: 'COMPLETED' | 'CANCELLED') 
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+.reminder-failed {
+  color: var(--ir-danger);
+  font-weight: 650;
 }
 @media (max-width: 960px) {
   .dashboard-main-grid { grid-template-columns: 1fr; }

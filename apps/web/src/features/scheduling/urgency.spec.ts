@@ -21,6 +21,8 @@ function schedule(partial: Partial<Schedule>): Schedule {
     referenceTime: '2026-08-12T00:00:00Z',
     version: 0,
     updatedAt: '2026-08-12T00:00:00Z',
+    reminderOffsets: null,
+    reminders: [],
     ...partial,
   }
 }
