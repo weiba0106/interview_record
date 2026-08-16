@@ -98,6 +98,53 @@ export async function updateRound(id: string, payload: RoundRequest): Promise<In
   ).data
 }
 
+export interface QuestionBankItem {
+  id: string
+  question: string
+  answer: string | null
+  category: string | null
+  roundId: string | null
+  roundNumber: number | null
+  roundName: string | null
+  positionId: string | null
+  positionTitle: string | null
+  companyName: string | null
+  createdAt: string
+}
+
+export interface QuestionBankPage {
+  items: QuestionBankItem[]
+  page: number
+  size: number
+  totalItems: number
+  totalPages: number
+}
+
+export async function searchQuestionBank(params: {
+  category?: string
+  keyword?: string
+  page?: number
+  size?: number
+}): Promise<QuestionBankPage> {
+  return (
+    await request<QuestionBankPage>({ method: 'get', url: '/interview-rounds/questions', params })
+  ).data
+}
+
+export async function randomQuestions(limit = 10): Promise<QuestionBankItem[]> {
+  return (
+    await request<QuestionBankItem[]>({
+      method: 'get',
+      url: '/interview-rounds/questions/random',
+      params: { limit },
+    })
+  ).data
+}
+
+export async function questionCategories(): Promise<string[]> {
+  return (await request<string[]>({ method: 'get', url: '/interview-rounds/question-categories' })).data
+}
+
 export async function deleteRound(id: string): Promise<void> {
   await request({ method: 'delete', url: `/interview-rounds/${id}` })
 }

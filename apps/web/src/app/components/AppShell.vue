@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElButton, ElIcon } from 'element-plus'
-import { Calendar, DataAnalysis, Grid, Moon, OfficeBuilding, Setting, Sunny, Tickets, UserFilled } from '@element-plus/icons-vue'
+import { Calendar, DataAnalysis, Grid, Moon, Notebook, OfficeBuilding, Setting, Sunny, Tickets, UserFilled } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/shared/auth/auth.store'
 import { getPreferences, updatePreferences } from '@/features/preferences/api/preferences.api'
 import { applyDark, applyTheme, themeLabel, themeOptions, type ThemeName } from '@/app/theme'
@@ -22,6 +22,7 @@ const DARK_STORAGE_KEY = 'interview-record.dark'
 const links = [
   { name: 'app', label: '概览', icon: Grid },
   { name: 'positions', label: '岗位', icon: Tickets },
+  { name: 'question-bank', label: '题库', icon: Notebook },
   { name: 'companies', label: '公司', icon: OfficeBuilding },
   { name: 'schedules', label: '日程', icon: Calendar },
   { name: 'insights', label: '统计', icon: DataAnalysis },

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
+import { applyDark } from '@/app/theme'
+
 withDefaults(defineProps<{
   headingId?: string
   eyebrow: string
@@ -7,10 +10,39 @@ withDefaults(defineProps<{
 }>(), {
   headingId: 'auth-heading',
 })
+
+const DARK_STORAGE_KEY = 'interview-record.dark'
+const darkMode = ref(false)
+
+function rememberDark(dark: boolean) {
+  try { localStorage.setItem(DARK_STORAGE_KEY, dark ? '1' : '0') } catch { /* 存储不可用时降级 */ }
+}
+
+/** 未登录页面同样遵循暗色偏好：读取本地镜像立即生效，切换即写回。 */
+onMounted(() => {
+  try {
+    darkMode.value = localStorage.getItem(DARK_STORAGE_KEY) === '1'
+    applyDark(darkMode.value)
+  } catch { /* 存储不可用时保持浅色 */ }
+})
+
+function toggleDark() {
+  darkMode.value = !darkMode.value
+  applyDark(darkMode.value)
+  rememberDark(darkMode.value)
+}
 </script>
 
 <template>
   <main class="auth-shell" :aria-labelledby="headingId">
+    <button
+      type="button"
+      class="auth-dark-toggle"
+      :data-action="'toggle-dark-auth'"
+      :aria-label="darkMode ? '切换到浅色模式' : '切换到暗色模式'"
+      :title="darkMode ? '浅色模式' : '暗色模式'"
+      @click="toggleDark"
+    >{{ darkMode ? '☀' : '☾' }}</button>
     <section class="auth-showcase" aria-label="面试记录产品介绍">
       <RouterLink to="/login" class="auth-brand" aria-label="面试记录首页">
         <span class="auth-brand-mark" aria-hidden="true">IR</span>
@@ -58,7 +90,27 @@ withDefaults(defineProps<{
   display: grid;
   grid-template-columns: minmax(360px, 0.88fr) minmax(520px, 1.12fr);
   background: var(--ir-bg);
+  position: relative;
 }
+.auth-dark-toggle {
+  position: absolute;
+  z-index: 10;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--ir-border);
+  border-radius: var(--ir-radius-sm);
+  background: var(--ir-surface);
+  color: var(--ir-text);
+  font-size: 17px;
+  cursor: pointer;
+  transition: border-color var(--ir-transition), color var(--ir-transition);
+}
+.auth-dark-toggle:hover { border-color: var(--ir-primary-strong); color: var(--ir-primary-strong); }
+:root[data-dark="true"] .auth-dark-toggle { border-color: var(--ir-border-strong); }
 .auth-showcase {
   position: relative;
   isolation: isolate;

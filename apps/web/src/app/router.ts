@@ -9,6 +9,7 @@ import PositionFormView from '@/views/PositionFormView.vue'
 import PositionDetailView from '@/views/PositionDetailView.vue'
 import SchedulesView from '@/views/SchedulesView.vue'
 import ScheduleDetailView from '@/views/ScheduleDetailView.vue'
+import QuestionBankView from '@/views/QuestionBankView.vue'
 import ForgotPasswordView from '@/views/ForgotPasswordView.vue'
 import LoginView from '@/views/LoginView.vue'
 import RegisterView from '@/views/RegisterView.vue'
@@ -44,6 +45,7 @@ export function createAppRouter() {
       { path: '/app/positions/:id/edit', name: 'edit-position', component: PositionFormView, meta: { requiresAuth: true } },
       { path: '/app/schedules', name: 'schedules', component: SchedulesView, meta: { requiresAuth: true } },
       { path: '/app/schedules/:id', name: 'schedule-detail', component: ScheduleDetailView, meta: { requiresAuth: true } },
+      { path: '/app/questions', name: 'question-bank', component: QuestionBankView, meta: { requiresAuth: true } },
       { path: '/app/insights', name: 'insights', component: InsightsView, meta: { requiresAuth: true } },
       { path: '/app/settings', name: 'settings', component: SettingsView, meta: { requiresAuth: true } },
     ],
