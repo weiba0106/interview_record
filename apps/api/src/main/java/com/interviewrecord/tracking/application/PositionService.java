@@ -196,7 +196,7 @@ public class PositionService {
 
     private Company resolveCompanyForCreate(Long userId, PositionRequest request) {
         String newName = request.newCompanyName() == null ? null : request.newCompanyName().trim();
-        if (!newName.isBlank()) {
+        if (newName != null && !newName.isBlank()) {
             // 快速新建：同名公司直接复用，避免重复；名称查找仅限当前用户范围
             return companies.findFirstByUserIdAndNameIgnoreCase(userId, newName)
                     .orElseGet(() -> companies.save(new Company(userId, newName, null, null, clock.instant())));

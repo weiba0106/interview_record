@@ -11,7 +11,10 @@ import com.interviewrecord.scheduling.application.ScheduleService;
 import com.interviewrecord.scheduling.domain.ScheduleEvent;
 import com.interviewrecord.scheduling.infrastructure.JpaScheduleEventRepository;
 import com.interviewrecord.tracking.api.TrackingDtos.PositionListResponse;
+import com.interviewrecord.tracking.domain.Company;
+import com.interviewrecord.tracking.domain.JobType;
 import com.interviewrecord.tracking.domain.Position;
+import com.interviewrecord.tracking.domain.PositionStatus;
 import com.interviewrecord.tracking.infrastructure.JpaCompanyRepository;
 import com.interviewrecord.tracking.infrastructure.JpaManagedJobTypeRepository;
 import com.interviewrecord.tracking.infrastructure.JpaManagedPositionStatusRepository;
@@ -20,6 +23,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -85,5 +89,45 @@ class PositionServiceTest {
         PositionListResponse second = service(positions, schedules).search(1L, null, null, null,
                 false, null, null, null, 1, 2, "nextSchedule", "asc");
         assertThat(second.items()).extracting(item -> item.title()).containsExactly("岗位-2");
+    }
+
+    @Test
+    void createWithSelectedCompanyAndNoNewCompanyNameDoesNotThrow() {
+        JpaPositionRepository positions = org.mockito.Mockito.mock(JpaPositionRepository.class);
+        JpaScheduleEventRepository schedules = org.mockito.Mockito.mock(JpaScheduleEventRepository.class);
+        JpaCompanyRepository companies = org.mockito.Mockito.mock(JpaCompanyRepository.class);
+        JpaManagedJobTypeRepository jobTypes = org.mockito.Mockito.mock(JpaManagedJobTypeRepository.class);
+        JpaManagedPositionStatusRepository statuses = org.mockito.Mockito.mock(JpaManagedPositionStatusRepository.class);
+        JpaInterviewRoundRepository rounds = org.mockito.Mockito.mock(JpaInterviewRoundRepository.class);
+        ScheduleService scheduleService = org.mockito.Mockito.mock(ScheduleService.class);
+
+        Company company = new Company(1L, "示例科技", null, null, NOW);
+        ReflectionTestUtils.setField(company, "id", 5L);
+        JobType jobType = new JobType(1L, "秋招", NOW);
+        ReflectionTestUtils.setField(jobType, "id", 2L);
+        PositionStatus status = new PositionStatus(1L, "投递中", 0, "#46a758", "ACTIVE", NOW);
+        ReflectionTestUtils.setField(status, "id", 3L);
+        Position saved = new Position(1L, 5L, 2L, 3L, "后端开发工程师", null, null, null, null, null, NOW);
+        ReflectionTestUtils.setField(saved, "id", 9L);
+
+        given(companies.findByIdAndUserId(5L, 1L)).willReturn(Optional.of(company));
+        given(jobTypes.findByIdAndUserId(2L, 1L)).willReturn(Optional.of(jobType));
+        given(statuses.findByIdAndUserId(3L, 1L)).willReturn(Optional.of(status));
+        given(positions.save(any())).willReturn(saved);
+        given(companies.findAllByUserIdOrderByUpdatedAtDesc(1L)).willReturn(List.of(company));
+        given(jobTypes.findAllByUserIdOrderByIdAsc(1L)).willReturn(List.of(jobType));
+        given(statuses.findAllByUserIdOrderBySortOrderAsc(1L)).willReturn(List.of(status));
+        given(rounds.countByUserIdGroupedByPosition(eq(1L), any())).willReturn(List.of());
+        given(schedules.countByUserIdGroupedByPosition(eq(1L), any())).willReturn(List.of());
+        given(schedules.findPendingForPositionsFrom(eq(1L), any(), any())).willReturn(List.of());
+
+        PositionService service = new PositionService(positions, companies, jobTypes, statuses, rounds,
+                schedules, scheduleService, new RichTextSanitizer(), Clock.fixed(NOW, ZoneOffset.UTC));
+
+        var response = service.create(1L, new com.interviewrecord.tracking.api.TrackingDtos.PositionRequest(
+                "5", null, "2", "3", "后端开发工程师", null, null, null, null, null, null, null));
+
+        assertThat(response.companyName()).isEqualTo("示例科技");
+        assertThat(response.title()).isEqualTo("后端开发工程师");
     }
 }
