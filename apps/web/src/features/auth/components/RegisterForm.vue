@@ -4,7 +4,7 @@ import { ElButton, ElInput } from 'element-plus'
 import { register } from '@/features/auth/api/auth.api'
 import { isApiRequestError } from '@/shared/api/error'
 
-const emit = defineEmits<{ submitted: [] }>()
+const emit = defineEmits<{ submitted: [email: string] }>()
 const defaultTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Shanghai'
 const form = reactive({ email: '', password: '', displayName: '', timeZone: defaultTimeZone })
 const pending = ref(false)
@@ -13,7 +13,7 @@ const fieldErrors = ref<Record<string, string>>({})
 
 async function submit() {
   pending.value = true; message.value = ''; fieldErrors.value = {}
-  try { await register(form); emit('submitted') }
+  try { await register(form); emit('submitted', form.email.trim()) }
   catch (error) {
     if (isApiRequestError(error)) { message.value = error.apiError.message; fieldErrors.value = error.apiError.fieldErrors }
     else message.value = '注册失败，请稍后重试'

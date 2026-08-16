@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { onMounted, reactive, ref, watch } from 'vue'
 import { ElButton, ElInput, ElOption, ElSelect } from 'element-plus'
 import { SCHEDULE_EVENT_TYPES, type Schedule, type ScheduleRequest } from '../api/schedules.api'
+import { listRounds, type InterviewRound } from '@/features/interviews/api/interviews.api'
 import type { PositionSummary } from '@/features/tracking/api/tracking.types'
 import { fromDatetimeInput, toDatetimeInput } from '@/shared/format/datetime'
 
@@ -18,10 +19,35 @@ const form = reactive({
   startsAt: toDatetimeInput(props.initial?.startsAt),
   endsAt: toDatetimeInput(props.initial?.endsAt),
   positionId: props.initial?.positionId ?? '',
+  interviewRoundId: props.initial?.interviewRoundId ?? '',
   location: props.initial?.location ?? '',
   notes: props.initial?.notes ?? '',
   reminderDisabled: Array.isArray(props.initial?.reminderOffsets) && props.initial.reminderOffsets.length === 0,
   reminderOffsets: props.initial?.reminderOffsets?.length ? props.initial.reminderOffsets.join(', ') : '',
+})
+
+const rounds = ref<InterviewRound[]>([])
+const roundsLoading = ref(false)
+
+async function loadRounds(positionId: string) {
+  roundsLoading.value = true
+  rounds.value = []
+  try {
+    rounds.value = await listRounds(positionId)
+  } catch { /* 轮次加载失败不阻塞日程保存，仅隐藏关联选项 */ } finally {
+    roundsLoading.value = false
+  }
+}
+
+/** 更换岗位后清空轮次选择并加载该岗位的面试轮次（PRD §7.6.2）。 */
+watch(() => form.positionId, (positionId) => {
+  if (form.interviewRoundId && (!positionId || positionId !== props.initial?.positionId)) form.interviewRoundId = ''
+  if (positionId) void loadRounds(positionId)
+  else rounds.value = []
+})
+
+onMounted(() => {
+  if (form.positionId) void loadRounds(form.positionId)
 })
 
 /** 返回 undefined=不改动（创建时即默认规则），[]=关闭，否则为自定义分钟列表；校验失败返回 null。 */
@@ -61,6 +87,7 @@ function submit() {
     startsAt,
     endsAt,
     positionId: form.positionId || null,
+    interviewRoundId: form.interviewRoundId || null,
     location: form.location.trim() || null,
     notes: form.notes.trim() || null,
     version: props.initial?.version ?? null,
@@ -93,6 +120,19 @@ function submit() {
     <label for="schedule-position">关联岗位（可选）</label>
     <ElSelect id="schedule-position" v-model="form.positionId" name="positionId" filterable clearable placeholder="不关联">
       <ElOption v-for="position in positions" :key="position.id" :label="`${position.companyName} · ${position.title}`" :value="position.id" />
+    </ElSelect>
+
+    <label for="schedule-round">关联面试轮次（可选）</label>
+    <ElSelect
+      id="schedule-round"
+      v-model="form.interviewRoundId"
+      name="interviewRoundId"
+      clearable
+      :disabled="!form.positionId || roundsLoading"
+      :placeholder="form.positionId ? (rounds.length > 0 ? '不关联轮次' : '该岗位暂无面试轮次') : '先选择岗位'"
+      :aria-label="'关联面试轮次'"
+    >
+      <ElOption v-for="round in rounds" :key="round.id" :label="`第 ${round.roundNumber} 轮 · ${round.roundName}`" :value="round.id" />
     </ElSelect>
 
     <label for="schedule-location">地点或链接（可选）</label>

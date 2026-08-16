@@ -265,7 +265,7 @@ async function confirmDelete() {
                 {{ scheduleEventTypeLabel(schedule.eventType) }} · {{ formatDateTime(schedule.startsAt ?? schedule.endsAt) }}
                 <template v-if="schedule.endsAt && schedule.startsAt"> ~ {{ formatDateTime(schedule.endsAt) }}</template>
               </p>
-              <p v-if="schedule.positionTitle" class="event-meta">岗位：{{ schedule.positionTitle }}<template v-if="schedule.location"> · 形式/地点：{{ schedule.location }}</template></p>
+              <p v-if="schedule.positionTitle" class="event-meta">岗位：{{ schedule.positionTitle }}<template v-if="schedule.interviewRoundId"> · 已关联面试轮次</template><template v-if="schedule.location"> · 形式/地点：{{ schedule.location }}</template></p>
               <p v-if="schedule.status === 'PENDING'" class="event-meta event-countdown">{{ urgencyCountdown(schedule) }}</p>
               <p v-if="failedReminderCount(schedule) > 0" class="reminder-warning" role="status" :data-testid="`reminder-failed-${schedule.id}`">
                 ⚠ 邮件提醒发送失败（{{ failedReminderCount(schedule) }} 条），已停止重试，请检查邮箱后编辑日程重新触发。

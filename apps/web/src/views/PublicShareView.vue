@@ -1,15 +1,34 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { getPublicShare, type PublicShare } from '@/features/sharing/api/sharing.api'
 
 const route = useRoute()
 const data = ref<PublicShare | null>(null)
 const error = ref('')
+
+/** PRD §7.8.2：分享页禁止搜索引擎收录（后端返回 robots 指令，前端写入 meta 并在离开时清理）。 */
+let robotsMeta: HTMLMetaElement | null = null
+function applyRobots(robots: string) {
+  robotsMeta = document.querySelector('meta[name="robots"]') ?? document.createElement('meta')
+  robotsMeta.name = 'robots'
+  robotsMeta.content = robots
+  if (!robotsMeta.isConnected) document.head.appendChild(robotsMeta)
+}
+function removeRobots() {
+  robotsMeta?.remove()
+  robotsMeta = null
+}
+
 onMounted(async () => {
   const token = String(route.params.token ?? '')
-  try { data.value = await getPublicShare(token); document.title = '面试经验分享' } catch { error.value = '分享链接不存在、已过期或已撤销' }
+  try {
+    data.value = await getPublicShare(token)
+    document.title = '面试经验分享'
+    applyRobots(data.value.robots || 'noindex, nofollow')
+  } catch { error.value = '分享链接不存在、已过期或已撤销' }
 })
+onBeforeUnmount(() => removeRobots())
 </script>
 <template>
   <main class="public-share">
