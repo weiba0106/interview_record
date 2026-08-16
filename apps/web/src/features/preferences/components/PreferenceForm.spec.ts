@@ -13,7 +13,7 @@ describe('PreferenceForm', () => {
     await wrapper.get('input[name="interviewReminderOffsets"]').setValue('30, 1440, 30')
     await wrapper.get('form').trigger('submit.prevent')
 
-    expect(wrapper.emitted('submitted')?.[0]).toEqual([{ displayName: '小林', timeZone: 'Asia/Shanghai', theme: 'GRAPHITE_CORAL', interviewReminderOffsets: [1440, 30], deadlineReminderOffsets: [60] }])
+    expect(wrapper.emitted('submitted')?.[0]).toEqual([{ displayName: '小林', timeZone: 'Asia/Shanghai', theme: 'GRAPHITE_CORAL', darkMode: false, interviewReminderOffsets: [1440, 30], deadlineReminderOffsets: [60] }])
   })
 
   it('associates reminder validation errors with their input controls', async () => {

@@ -57,3 +57,9 @@ export function themeLabel(value: ThemeName | undefined | null): string {
 export function applyTheme(theme: ThemeName | undefined | null): void {
   document.documentElement.dataset.theme = theme || 'GRAPHITE_CORAL'
 }
+
+/** 暗色模式与四套强调色主题正交：切换不影响主题选择本身。 */
+export function applyDark(dark: boolean): void {
+  if (dark) document.documentElement.dataset.dark = 'true'
+  else delete document.documentElement.dataset.dark
+}

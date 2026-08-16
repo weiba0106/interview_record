@@ -172,7 +172,9 @@ async function confirmDeletePosition() {
           <div class="info-item info-item-wide"><span class="info-label">岗位描述</span><div class="rich-content description-text" v-html="position.description ?? '<p>—</p>'" /></div>
           <div v-if="position.nextSchedule" class="info-item info-item-wide">
             <span class="info-label">下一场日程</span>
-            <span>{{ position.nextSchedule.title }} · {{ formatDateTime(position.nextSchedule.time) }}</span>
+            <RouterLink :to="{ name: 'schedule-detail', params: { id: position.nextSchedule.id } }">
+              {{ position.nextSchedule.title }} · {{ formatDateTime(position.nextSchedule.time) }}
+            </RouterLink>
           </div>
         </div>
       </section>

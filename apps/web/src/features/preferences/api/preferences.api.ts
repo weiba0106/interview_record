@@ -5,6 +5,8 @@ export interface Preferences {
   displayName: string
   timeZone: string
   theme: CurrentUser['theme']
+  /** 暗色模式（与主题正交）；旧数据可能缺省，按 false 处理 */
+  darkMode?: boolean
   interviewReminderOffsets: number[]
   deadlineReminderOffsets: number[]
 }

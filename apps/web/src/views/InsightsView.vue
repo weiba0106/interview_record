@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { ElButton, ElOption, ElSelect } from 'element-plus'
 import { listJobTypes } from '@/features/tracking/api/job-types.api'
 import { getInsights, type InsightsResponse } from '@/features/insights/api/insights.api'
+import { buildTrendChart } from '@/features/insights/trend-chart'
 import { isApiRequestError } from '@/shared/api/error'
 
 const loading = ref(true)
@@ -12,6 +13,10 @@ const selectedJobType = ref('')
 const appliedFrom = ref('')
 const appliedTo = ref('')
 const insights = ref<InsightsResponse | null>(null)
+const trendView = ref<'chart' | 'table'>('chart')
+
+const trendChart = computed(() =>
+  buildTrendChart(insights.value?.applicationTrend ?? [], 640, 220))
 
 async function load() {
   loading.value = true; error.value = ''
@@ -122,16 +127,53 @@ onMounted(() => { void load() })
       </div>
 
       <section class="ir-panel" aria-label="投递趋势">
-        <div class="ir-panel-head"><div><span class="panel-kicker">时间线</span><h2>投递趋势</h2></div></div>
-        <div v-if="insights.applicationTrend.length" class="table-scroll">
-          <table class="ir-table">
-            <thead><tr><th scope="col">日期</th><th scope="col">投递岗位</th><th scope="col">面试轮次</th></tr></thead>
-            <tbody>
-              <tr v-for="item in insights.applicationTrend" :key="item.date">
-                <td class="cell-strong">{{ item.date }}</td><td>{{ item.applicationCount }}</td><td>{{ item.interviewRoundCount }}</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="ir-panel-head">
+          <div><span class="panel-kicker">时间线</span><h2>投递趋势</h2></div>
+          <div class="segmented" role="tablist" aria-label="趋势展示方式">
+            <button type="button" data-action="trend-chart" :aria-pressed="trendView === 'chart'" @click="trendView = 'chart'">图表</button>
+            <button type="button" data-action="trend-table" :aria-pressed="trendView === 'table'" @click="trendView = 'table'">表格</button>
+          </div>
+        </div>
+        <div v-if="insights.applicationTrend.length" class="trend-chart-wrap" data-testid="trend-chart">
+          <svg
+            v-if="trendView === 'chart'"
+            class="trend-chart"
+            viewBox="0 0 640 220"
+            role="img"
+            aria-label="投递趋势柱状图"
+          >
+            <g v-for="grid in trendChart.gridValues" :key="grid">
+              <line
+                :x1="30" :x2="632" :y1="8 + 166 - Math.round((grid / trendChart.maxValue) * 166)"
+                :y2="8 + 166 - Math.round((grid / trendChart.maxValue) * 166)"
+                class="trend-grid-line"
+              />
+              <text x="24" :y="12 + 166 - Math.round((grid / trendChart.maxValue) * 166)" class="trend-axis-text" text-anchor="end">{{ grid }}</text>
+            </g>
+            <g v-for="bar in trendChart.bars" :key="bar.label + bar.x">
+              <rect :x="bar.x" :y="bar.applicationY" width="11" :height="bar.applicationHeight" class="trend-bar trend-bar-applications">
+                <title>{{ bar.tooltip }}</title>
+              </rect>
+              <rect :x="bar.x + 12" :y="bar.roundY" width="11" :height="bar.roundHeight" class="trend-bar trend-bar-rounds">
+                <title>{{ bar.tooltip }}</title>
+              </rect>
+              <text :x="bar.x + 11" y="212" class="trend-axis-text" text-anchor="middle">{{ bar.label }}</text>
+            </g>
+          </svg>
+          <div class="trend-legend">
+            <span><i class="trend-legend-swatch applications" aria-hidden="true" />投递岗位</span>
+            <span><i class="trend-legend-swatch rounds" aria-hidden="true" />面试轮次</span>
+          </div>
+          <div v-if="trendView === 'table'" class="table-scroll">
+            <table class="ir-table">
+              <thead><tr><th scope="col">日期</th><th scope="col">投递岗位</th><th scope="col">面试轮次</th></tr></thead>
+              <tbody>
+                <tr v-for="item in insights.applicationTrend" :key="item.date">
+                  <td class="cell-strong">{{ item.date }}</td><td>{{ item.applicationCount }}</td><td>{{ item.interviewRoundCount }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
         <div v-else class="ir-empty">
           <span class="ir-empty-icon" aria-hidden="true">▦</span>
@@ -157,6 +199,18 @@ onMounted(() => { void load() })
 .bar-row b { color: var(--ir-muted); font-size: 12px; text-align: right; }
 .bar-track { height: 10px; background: var(--ir-surface-muted); border-radius: 8px; overflow: hidden; }
 .bar-track i { display: block; height: 100%; background: var(--ir-primary-strong); border-radius: inherit; }
+.trend-chart-wrap { padding: 12px 16px 16px; }
+.trend-chart { width: 100%; height: auto; }
+.trend-grid-line { stroke: var(--ir-border); stroke-width: 1; }
+.trend-axis-text { fill: var(--ir-faint); font-size: 10px; }
+.trend-bar-applications { fill: var(--ir-primary-strong); }
+.trend-bar-rounds { fill: color-mix(in srgb, var(--ir-primary-strong), white 45%); }
+.trend-legend { display: flex; gap: 16px; padding: 6px 2px 0; color: var(--ir-muted); font-size: 12px; }
+.trend-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.trend-legend-swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.trend-legend-swatch.applications { background: var(--ir-primary-strong); }
+.trend-legend-swatch.rounds { background: color-mix(in srgb, var(--ir-primary-strong), white 45%); }
+.trend-chart-wrap .table-scroll { margin-top: 10px; }
 @media (max-width: 760px) {
   .insight-columns { grid-template-columns: 1fr; }
   .bar-row { grid-template-columns: 92px 1fr 30px; }

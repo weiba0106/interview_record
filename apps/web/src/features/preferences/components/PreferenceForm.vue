@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reactive, ref, watch } from 'vue'
 import { ElButton, ElInput, ElOption, ElSelect } from 'element-plus'
-import { applyTheme, themeOptions, type ThemeName } from '@/app/theme'
+import { applyDark, applyTheme, themeOptions, type ThemeName } from '@/app/theme'
 import type { Preferences } from '../api/preferences.api'
 
 const props = defineProps<{ preferences: Preferences }>()
@@ -11,6 +11,7 @@ const form = reactive({
   displayName: props.preferences.displayName,
   timeZone: props.preferences.timeZone,
   theme: props.preferences.theme,
+  darkMode: props.preferences.darkMode ?? false,
   interviewReminderOffsets: props.preferences.interviewReminderOffsets.join(', '),
   deadlineReminderOffsets: props.preferences.deadlineReminderOffsets.join(', '),
 })
@@ -19,6 +20,7 @@ watch(() => props.preferences, (preferences) => {
   form.displayName = preferences.displayName
   form.timeZone = preferences.timeZone
   form.theme = preferences.theme
+  form.darkMode = preferences.darkMode ?? false
   form.interviewReminderOffsets = preferences.interviewReminderOffsets.join(', ')
   form.deadlineReminderOffsets = preferences.deadlineReminderOffsets.join(', ')
 }, { deep: true })
@@ -27,6 +29,11 @@ function selectTheme(theme: ThemeName) {
   form.theme = theme
   // 点击预览卡立即生效，保存后由后端持久化
   applyTheme(theme)
+}
+
+function toggleDark(dark: boolean) {
+  form.darkMode = dark
+  applyDark(dark)
 }
 
 function parseOffsets(value: string, field: string): number[] | undefined {
@@ -48,6 +55,7 @@ function submit() {
   if (!interviewReminderOffsets || !deadlineReminderOffsets || Object.keys(fieldErrors.value).length > 0) return
   emit('submitted', {
     displayName: form.displayName.trim(), timeZone: form.timeZone.trim(), theme: form.theme,
+    darkMode: form.darkMode,
     interviewReminderOffsets, deadlineReminderOffsets,
   })
 }
@@ -107,6 +115,10 @@ function submit() {
               <span v-if="form.theme === option.value" class="theme-card-check" aria-label="当前主题">✓</span>
             </button>
           </div>
+          <label class="dark-mode-row">
+            <input :checked="form.darkMode" name="darkMode" type="checkbox" @change="toggleDark(($event.target as HTMLInputElement).checked)" />
+            暗色模式（与主题色独立，全站深色界面）
+          </label>
           <label for="preference-theme">主题</label>
           <ElSelect id="preference-theme" v-model="form.theme" name="theme" class="theme-select">
             <ElOption label="原始靛蓝" value="INDIGO" />
@@ -147,6 +159,20 @@ function submit() {
   text-transform: uppercase;
 }
 .pref-section label { font-size: 13px; font-weight: 650; color: var(--ir-text); }
+.dark-mode-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--ir-border);
+  border-radius: var(--ir-radius-sm);
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+.dark-mode-row:has(input:checked) {
+  border-color: var(--ir-primary-strong);
+  background: var(--ir-primary-soft);
+}
 .pref-hint { margin: -4px 0 2px; color: var(--ir-muted); font-size: 12px; line-height: 1.6; }
 .pref-submit { width: fit-content; min-width: 116px; margin-top: 2px; }
 

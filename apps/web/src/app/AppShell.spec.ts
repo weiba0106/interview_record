@@ -78,4 +78,21 @@ describe('AppShell', () => {
     await wrapper.get('[data-action="open-theme-picker"]').trigger('keydown', { key: 'Escape' })
     expect(wrapper.find('[role="listbox"]').exists()).toBe(false)
   })
+
+  it('toggles dark mode and persists it through the preference API', async () => {
+    const { wrapper } = await mountShell()
+    const updated = vi.mocked(updatePreferences)
+    updated.mockImplementation(async (preferences) => preferences)
+
+    await wrapper.get('[data-action="toggle-dark"]').trigger('click')
+
+    expect(document.documentElement.dataset.dark).toBe('true')
+    expect(updatePreferences).toHaveBeenCalledWith(expect.objectContaining({ darkMode: true }))
+    expect(localStorage.getItem('interview-record.dark')).toBe('1')
+
+    await wrapper.get('[data-action="toggle-dark"]').trigger('click')
+
+    expect(document.documentElement.dataset.dark).toBeUndefined()
+    expect(updatePreferences).toHaveBeenCalledWith(expect.objectContaining({ darkMode: false }))
+  })
 })

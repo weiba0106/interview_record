@@ -594,6 +594,44 @@ p[role="status"] {
   color: var(--ir-muted);
 }
 
+/* ============================================================
+   暗色模式：与四套强调色主题正交。
+   中性色全部下沉，品牌/语义色保持可读对比（AA）。
+   ============================================================ */
+:root[data-dark="true"] {
+  --ir-page-bg: #14161a;
+  --ir-bg: #191c21;
+  --ir-surface: #20242b;
+  --ir-surface-muted: #262b33;
+  --ir-text: #e8eaed;
+  --ir-muted: #a3aab4;
+  --ir-faint: #7d848e;
+  --ir-border: #333946;
+  --ir-border-strong: #3f4654;
+  --ir-primary-soft: color-mix(in srgb, var(--ir-primary) 22%, #20242b);
+  --ir-shadow-sm: 0 1px 2px rgba(0, 0, 0, .35), 0 4px 14px rgba(0, 0, 0, .3);
+  --ir-shadow-md: 0 2px 6px rgba(0, 0, 0, .4), 0 12px 32px rgba(0, 0, 0, .35);
+  --ir-shadow-app: 0 2px 8px rgba(0, 0, 0, .4), 0 18px 48px rgba(0, 0, 0, .4);
+}
+:root[data-dark="true"] p[role="alert"] {
+  color: #ffb3b6;
+  background: color-mix(in srgb, var(--ir-urgent), #20242b 88%);
+}
+:root[data-dark="true"] p[role="status"] {
+  color: var(--ir-muted);
+  background: var(--ir-surface-muted);
+}
+:root[data-dark="true"] .ir-table tbody tr:hover {
+  background: color-mix(in srgb, var(--ir-primary-strong), transparent 88%);
+}
+:root[data-dark="true"] .reminder-warning,
+:root[data-dark="true"] .urgency-event.urgency-urgent .level {
+  color: #ffffff;
+}
+:root[data-dark="true"] .theme-trigger-swatch {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ir-primary), transparent 70%);
+}
+
 /* ---------- 响应式 ---------- */
 @media (max-width: 860px) {
   .app-shell {

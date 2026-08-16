@@ -2,10 +2,10 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElButton, ElIcon } from 'element-plus'
-import { Calendar, DataAnalysis, Grid, OfficeBuilding, Setting, Tickets, UserFilled } from '@element-plus/icons-vue'
+import { Calendar, DataAnalysis, Grid, Moon, OfficeBuilding, Setting, Sunny, Tickets, UserFilled } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/shared/auth/auth.store'
 import { getPreferences, updatePreferences } from '@/features/preferences/api/preferences.api'
-import { applyTheme, themeLabel, themeOptions, type ThemeName } from '@/app/theme'
+import { applyDark, applyTheme, themeLabel, themeOptions, type ThemeName } from '@/app/theme'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -15,6 +15,10 @@ const themePickerOpen = ref(false)
 const themeSaving = ref(false)
 const themeError = ref('')
 const themePickerRef = ref<HTMLElement | null>(null)
+const darkMode = ref(false)
+const darkSaving = ref(false)
+
+const DARK_STORAGE_KEY = 'interview-record.dark'
 const links = [
   { name: 'app', label: '概览', icon: Grid },
   { name: 'positions', label: '岗位', icon: Tickets },
@@ -70,7 +74,49 @@ async function selectTheme(theme: ThemeName) {
   }
 }
 watch(() => auth.user?.theme, (theme) => applyTheme(theme), { immediate: true })
-onMounted(() => document.addEventListener('pointerdown', handleOutsideThemeClick))
+
+/** 暗色模式：先用本地镜像避免闪烁，再用后端偏好校准并持久化。 */
+function rememberDark(dark: boolean) {
+  try { localStorage.setItem(DARK_STORAGE_KEY, dark ? '1' : '0') } catch { /* 存储不可用时降级 */ }
+}
+async function loadDarkPreference() {
+  try {
+    const saved = await getPreferences()
+    darkMode.value = saved.darkMode ?? false
+    applyDark(darkMode.value)
+    rememberDark(darkMode.value)
+  } catch { /* 偏好加载失败时沿用本地镜像 */ }
+}
+async function toggleDark() {
+  if (darkSaving.value || !auth.user) return
+  const previous = darkMode.value
+  darkSaving.value = true
+  darkMode.value = !darkMode.value
+  applyDark(darkMode.value)
+  rememberDark(darkMode.value)
+  try {
+    const current = await getPreferences()
+    const saved = await updatePreferences({ ...current, darkMode: darkMode.value })
+    darkMode.value = saved.darkMode ?? darkMode.value
+    applyDark(darkMode.value)
+    rememberDark(darkMode.value)
+  } catch {
+    darkMode.value = previous
+    applyDark(previous)
+    rememberDark(previous)
+  } finally {
+    darkSaving.value = false
+  }
+}
+
+onMounted(() => {
+  try {
+    const mirror = localStorage.getItem(DARK_STORAGE_KEY)
+    if (mirror === '1') { darkMode.value = true; applyDark(true) }
+  } catch { /* 存储不可用时降级 */ }
+  document.addEventListener('pointerdown', handleOutsideThemeClick)
+  void loadDarkPreference()
+})
 onBeforeUnmount(() => document.removeEventListener('pointerdown', handleOutsideThemeClick))
 </script>
 
@@ -86,6 +132,14 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', handleOutsideT
       <header class="shell-topbar">
         <div class="shell-topbar-left"><ElButton class="mobile-menu-button" text aria-label="打开导航" @click="mobileOpen = true">☰</ElButton><div><span class="eyebrow">求职进度</span><h1>{{ currentLabel }}</h1></div></div>
         <div class="shell-topbar-actions">
+          <ElButton
+            text
+            class="dark-toggle"
+            :data-action="'toggle-dark'"
+            :aria-label="darkMode ? '切换到浅色模式' : '切换到暗色模式'"
+            :title="darkMode ? '浅色模式' : '暗色模式'"
+            @click="toggleDark"
+          ><ElIcon><component :is="darkMode ? Sunny : Moon" /></ElIcon></ElButton>
           <div ref="themePickerRef" class="theme-picker">
             <button
               class="theme-picker-trigger"
