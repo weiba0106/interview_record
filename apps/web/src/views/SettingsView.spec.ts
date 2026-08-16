@@ -56,4 +56,31 @@ describe('SettingsView', () => {
     await vi.waitFor(() => expect((wrapper.get('input[name="interviewReminderOffsets"]').element as HTMLInputElement).value).toBe('60, 5'))
     expect((wrapper.get('input[name="deadlineReminderOffsets"]').element as HTMLInputElement).value).toBe('10')
   })
+
+  it('generates a one-time CSV ZIP export and downloads it via the token flow', async () => {
+    const downloadRequests: string[] = []
+    server.use(
+      http.get('/api/v1/auth/csrf', () => new HttpResponse(null, { status: 204 })),
+      http.post('/api/v1/export/csv', () => HttpResponse.json({
+        token: 'token-1', fileName: 'interview-record-export-2026-08-13.zip',
+        expiresAt: '2026-08-13T00:30:00Z',
+      }, { status: 201 })),
+      http.get('/api/v1/export/download/token-1', ({ request }) => {
+        downloadRequests.push(request.url)
+        const bytes = new TextEncoder().encode('zip-bytes')
+        return HttpResponse.arrayBuffer(bytes.buffer as ArrayBuffer, {
+          headers: { 'Content-Type': 'application/zip' },
+        })
+      }),
+    )
+    const pinia = createPinia()
+    const auth = useAuthStore(pinia)
+    auth.$patch({ status: 'authenticated', user: { id: '42', email: 'user@example.com', displayName: '小林', emailVerified: true, timeZone: 'Asia/Shanghai', theme: 'GRAPHITE_CORAL' } })
+    const wrapper = mount(SettingsView, { global: { plugins: [pinia, ElementPlus] } })
+
+    await wrapper.get('button[data-action="export-csv"]').trigger('click')
+
+    await vi.waitFor(() => expect(wrapper.text()).toContain('CSV ZIP 导出已开始下载'))
+    expect(downloadRequests).toHaveLength(1)
+  })
 })

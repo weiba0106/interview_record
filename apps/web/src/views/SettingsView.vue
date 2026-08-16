@@ -6,7 +6,7 @@ import PreferenceForm from '@/features/preferences/components/PreferenceForm.vue
 import { deleteAccount, getPreferences, updatePreferences, type Preferences } from '@/features/preferences/api/preferences.api'
 import { isApiRequestError } from '@/shared/api/error'
 import { useAuthStore } from '@/shared/auth/auth.store'
-import { downloadJsonExport } from '@/features/export/api/export.api'
+import { createExport, downloadExport } from '@/features/export/api/export.api'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -50,11 +50,17 @@ async function savePreferences(next: Preferences) {
   }
 }
 
-async function exportData() {
+async function exportData(kind: 'csv' | 'json') {
   exporting.value = true; error.value = ''
-  try { await downloadJsonExport(); message.value = '数据导出已开始下载' }
-  catch (caught) { error.value = isApiRequestError(caught) ? caught.apiError.message : '导出失败，请稍后重试' }
-  finally { exporting.value = false }
+  try {
+    const created = await createExport(kind)
+    await downloadExport(created.token, created.fileName)
+    message.value = kind === 'csv' ? 'CSV ZIP 导出已开始下载（链接 30 分钟有效，下载一次后失效）' : 'JSON 导出已开始下载（链接 30 分钟有效，下载一次后失效）'
+  } catch (caught) {
+    error.value = isApiRequestError(caught) ? caught.apiError.message : '导出失败，请稍后重试'
+  } finally {
+    exporting.value = false
+  }
 }
 
 function openDeletionDialog() {
@@ -96,8 +102,11 @@ async function confirmDeletion() {
         <section class="ir-panel" aria-labelledby="export-heading">
           <div class="ir-panel-head"><div><span class="panel-kicker">数据所有权</span><h2 id="export-heading">数据备份</h2></div></div>
           <div class="settings-card-body">
-            <p>下载包含公司、岗位、面试、日程和偏好的 JSON 备份，不包含密码、会话和令牌。</p>
-            <ElButton data-action="export-json" :loading="exporting" @click="exportData">导出 JSON</ElButton>
+            <p>CSV ZIP 包含公司、岗位、面试轮次、问题、日程与状态表格（UTF-8 BOM）；JSON 为完整结构化备份。下载链接 30 分钟有效且只能下载一次，不包含密码、会话和令牌。</p>
+            <div class="export-actions">
+              <ElButton type="primary" data-action="export-csv" :loading="exporting" @click="exportData('csv')">导出 CSV ZIP</ElButton>
+              <ElButton data-action="export-json" :loading="exporting" @click="exportData('json')">导出 JSON</ElButton>
+            </div>
           </div>
         </section>
 
@@ -134,6 +143,7 @@ async function confirmDeletion() {
 .settings-side { display: grid; gap: 14px; }
 .settings-card-body { padding: 14px 18px 18px; display: grid; gap: 10px; justify-items: start; }
 .settings-card-body p { margin: 0; color: var(--ir-muted); line-height: 1.65; font-size: 13px; }
+.export-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .danger-card { border-color: color-mix(in srgb, var(--ir-danger), transparent 68%); }
 .danger-card .panel-kicker { color: var(--ir-danger); }
 @media (max-width: 960px) {
