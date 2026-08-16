@@ -165,7 +165,7 @@ function submit() {
       id="schedule-reminder-offsets"
       v-model="form.reminderOffsets"
       name="reminderOffsets"
-      placeholder="例如 1440, 30 表示提前 1 天和 30 分钟提醒"
+      placeholder="例如 1440, 120 表示提前 24 小时和 2 小时提醒"
       :disabled="form.reminderDisabled"
       :aria-describedby="fieldErrors.reminderOffsets ? 'schedule-reminder-offsets-error' : undefined"
     />

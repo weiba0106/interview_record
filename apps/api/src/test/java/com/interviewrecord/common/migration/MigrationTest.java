@@ -19,7 +19,7 @@ class MigrationTest extends MySqlIntegrationTestBase {
 
     @Test
     void appliesAccountAndSessionMigrations() {
-        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("10");
+        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("11");
 
         Integer users = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM information_schema.tables "

@@ -56,8 +56,9 @@ class ReminderServiceTest {
 
         ArgumentCaptor<Reminder> capture = ArgumentCaptor.forClass(Reminder.class);
         verify(reminders, org.mockito.Mockito.times(2)).save(capture.capture());
+        // 默认规则：提前 24 小时与 2 小时各一次
         assertThat(capture.getAllValues()).extracting(Reminder::scheduledAt)
-                .containsExactly(NOW.plusSeconds(2 * 3600), NOW.plusSeconds(25 * 3600 + 30 * 60));
+                .containsExactly(NOW.plusSeconds(2 * 3600), NOW.plusSeconds(24 * 3600));
     }
 
     @Test

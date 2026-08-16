@@ -21,8 +21,8 @@ const preferences = computed<Preferences>(() => savedPreferences.value ?? ({
   displayName: auth.user?.displayName ?? '',
   timeZone: auth.user?.timeZone ?? 'Asia/Shanghai',
   theme: auth.user?.theme ?? 'GRAPHITE_CORAL',
-  interviewReminderOffsets: [1440, 30],
-  deadlineReminderOffsets: [1440],
+  interviewReminderOffsets: [1440, 120],
+  deadlineReminderOffsets: [1440, 120],
 }))
 
 function applySavedPreferences(saved: Preferences) {

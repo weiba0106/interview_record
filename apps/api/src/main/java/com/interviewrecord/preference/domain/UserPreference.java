@@ -28,7 +28,8 @@ public class UserPreference {
     protected UserPreference() {}
     public UserPreference(User user, String timeZone, Instant now) {
         this.user = user; this.timeZone = timeZone; this.theme = Theme.GRAPHITE_CORAL;
-        this.interviewReminderOffsets = "[1440,30]"; this.deadlineReminderOffsets = "[1440]";
+        // 默认提醒规则：所有日程类型统一在提前 24 小时和 2 小时各提醒一次
+        this.interviewReminderOffsets = "[1440,120]"; this.deadlineReminderOffsets = "[1440,120]";
         this.createdAt = now; this.updatedAt = now;
     }
     public String timeZone() { return timeZone; }

@@ -83,7 +83,7 @@ async function save() {
         v-if="reminderMode === 'CUSTOM'"
         v-model="reminderInput"
         name="reminderOffsets"
-        placeholder="例如 1440, 30"
+        placeholder="例如 1440, 120（提前 24 小时和 2 小时）"
         aria-label="自定义提醒时间（分钟，逗号分隔）"
       />
       <label class="reminder-option">
