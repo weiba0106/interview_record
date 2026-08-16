@@ -4,6 +4,7 @@ import com.interviewrecord.common.error.ConflictException;
 import com.interviewrecord.common.error.NotFoundException;
 import com.interviewrecord.interviews.infrastructure.JpaInterviewRoundRepository;
 import com.interviewrecord.scheduling.infrastructure.JpaScheduleEventRepository;
+import com.interviewrecord.sharing.infrastructure.JpaShareLinkRepository;
 import com.interviewrecord.tracking.api.TrackingDtos.CompanyDetailResponse;
 import com.interviewrecord.tracking.api.TrackingDtos.CompanyRequest;
 import com.interviewrecord.tracking.api.TrackingDtos.CompanyResponse;
@@ -36,13 +37,16 @@ public class CompanyService {
     private final JpaManagedPositionStatusRepository statuses;
     private final JpaInterviewRoundRepository rounds;
     private final JpaScheduleEventRepository schedules;
+    private final JpaShareLinkRepository shareLinks;
     private final Clock clock;
 
     public CompanyService(JpaCompanyRepository companies, JpaPositionRepository positions,
             JpaManagedJobTypeRepository jobTypes, JpaManagedPositionStatusRepository statuses,
-            JpaInterviewRoundRepository rounds, JpaScheduleEventRepository schedules, Clock clock) {
+            JpaInterviewRoundRepository rounds, JpaScheduleEventRepository schedules,
+            JpaShareLinkRepository shareLinks, Clock clock) {
         this.companies = companies; this.positions = positions; this.jobTypes = jobTypes;
-        this.statuses = statuses; this.rounds = rounds; this.schedules = schedules; this.clock = clock;
+        this.statuses = statuses; this.rounds = rounds; this.schedules = schedules;
+        this.shareLinks = shareLinks; this.clock = clock;
     }
 
     @Transactional(readOnly = true)
@@ -83,8 +87,9 @@ public class CompanyService {
                 .toList();
         long roundCount = positionIds.isEmpty() ? 0 : rounds.countByUserIdAndPositionIdIn(userId, positionIds);
         long scheduleCount = positionIds.isEmpty() ? 0 : schedules.countByUserIdAndPositionIdIn(userId, positionIds);
+        long shareLinkCount = positionIds.isEmpty() ? 0 : shareLinks.countByUserIdAndPositionIdIn(userId, positionIds);
         return new CompanyDetailResponse(Long.toString(company.id()), company.name(), company.website(),
-                company.notes(), companyPositions.size(), roundCount, scheduleCount, summaries,
+                company.notes(), companyPositions.size(), roundCount, scheduleCount, shareLinkCount, summaries,
                 company.createdAt(), company.updatedAt());
     }
 

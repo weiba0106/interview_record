@@ -24,6 +24,7 @@ import com.interviewrecord.tracking.infrastructure.JpaPositionRepository;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Service;
@@ -62,21 +64,58 @@ public class PositionService {
 
     @Transactional(readOnly = true)
     public PositionListResponse search(Long userId, Long companyId, Long jobTypeId, Long statusId,
-            Boolean archived, String keyword, int page, int size, String sortBy, String sortDir) {
+            Boolean archived, String keyword, java.time.LocalDate appliedFrom, java.time.LocalDate appliedTo,
+            int page, int size, String sortBy, String sortDir) {
         int safePage = Math.max(0, page);
         int safeSize = Math.min(Math.max(1, size), MAX_PAGE_SIZE);
+        String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword.trim();
+        if ("nextSchedule".equals(sortBy)) {
+            return searchSortedByNextSchedule(userId, companyId, jobTypeId, statusId, archived,
+                    normalizedKeyword, appliedFrom, appliedTo, safePage, safeSize, sortDir);
+        }
         String property = switch (sortBy == null ? "updatedAt" : sortBy) {
             case "appliedAt" -> "appliedAt";
             case "deadlineAt" -> "deadlineAt";
             default -> "updatedAt";
         };
         Sort sort = Sort.by("desc".equalsIgnoreCase(sortDir) ? Sort.Direction.DESC : Sort.Direction.ASC, property);
-        String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword.trim();
         Page<Position> result = positions.search(userId, companyId, jobTypeId, statusId,
-                archived, normalizedKeyword, PageRequest.of(safePage, safeSize, sort));
+                archived, appliedFrom, appliedTo, normalizedKeyword, PageRequest.of(safePage, safeSize, sort));
         List<PositionResponse> items = enrich(userId, result.getContent());
         return new PositionListResponse(items, result.getNumber(), result.getSize(),
                 result.getTotalElements(), result.getTotalPages());
+    }
+
+    /**
+     * 按“下一场日程”排序无法在岗位实体列上完成：先按相同筛选取全量（设计容量内），
+     * 用每个岗位最早的待处理日程时间排序，再手工分页。
+     */
+    private PositionListResponse searchSortedByNextSchedule(Long userId, Long companyId, Long jobTypeId, Long statusId,
+            Boolean archived, String keyword, java.time.LocalDate appliedFrom, java.time.LocalDate appliedTo,
+            int page, int size, String sortDir) {
+        List<Position> all = positions.search(userId, companyId, jobTypeId, statusId, archived,
+                appliedFrom, appliedTo, keyword, Pageable.unpaged()).getContent();
+        Map<Long, Instant> nextByPosition = new HashMap<>();
+        List<Long> ids = all.stream().map(Position::id).toList();
+        if (!ids.isEmpty()) {
+            for (ScheduleEvent event : schedules.findPendingForPositions(userId, ids)) {
+                if (event.positionId() == null || event.referenceTime() == null) continue;
+                nextByPosition.merge(event.positionId(), event.referenceTime(), (left, right) ->
+                        left.isBefore(right) ? left : right);
+            }
+        }
+        Comparator<Position> byNext = Comparator
+                .comparing((Position position) -> nextByPosition.getOrDefault(position.id(), Instant.MAX))
+                .thenComparing(Position::updatedAt, Comparator.reverseOrder());
+        Comparator<Position> ordered = "asc".equalsIgnoreCase(sortDir) ? byNext : byNext.reversed();
+        List<Position> sorted = all.stream().sorted(ordered).toList();
+        int total = sorted.size();
+        int totalPages = total == 0 ? 0 : (total + size - 1) / size;
+        int safePage = Math.min(page, Math.max(0, totalPages - 1));
+        int from = safePage * size;
+        int to = Math.min(from + size, total);
+        List<PositionResponse> items = enrich(userId, sorted.subList(from, to));
+        return new PositionListResponse(items, safePage, size, total, totalPages);
     }
 
     @Transactional(readOnly = true)

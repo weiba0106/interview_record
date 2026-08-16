@@ -22,7 +22,7 @@ public final class TrackingDtos {
             long positionCount, Instant createdAt, Instant updatedAt) {}
 
     public record CompanyDetailResponse(String id, String name, String website, String notes,
-            long positionCount, long interviewRoundCount, long scheduleCount,
+            long positionCount, long interviewRoundCount, long scheduleCount, long shareLinkCount,
             List<PositionSummary> positions, Instant createdAt, Instant updatedAt) {}
 
     // ---- Job types ----

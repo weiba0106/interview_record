@@ -61,7 +61,7 @@ class PositionApiTest {
     @Test
     void searchForwardsFiltersPaginationAndSortToServiceScopedByUser() throws Exception {
         given(positionService.search(eq(42L), eq(5L), isNull(), isNull(), eq(false), eq("后端"),
-                eq(1), eq(10), eq("appliedAt"), eq("desc")))
+                isNull(), isNull(), eq(1), eq(10), eq("appliedAt"), eq("desc")))
                 .willReturn(new TrackingDtos.PositionListResponse(List.of(), 1, 10, 0, 0));
 
         mvc.perform(get("/api/v1/positions").with(authentication(authenticationFor(ALICE)))
@@ -69,7 +69,23 @@ class PositionApiTest {
                         .param("page", "1").param("size", "10").param("sortBy", "appliedAt").param("sortDir", "desc"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items").isArray());
-        verify(positionService).search(42L, 5L, null, null, false, "后端", 1, 10, "appliedAt", "desc");
+        verify(positionService).search(42L, 5L, null, null, false, "后端", null, null, 1, 10, "appliedAt", "desc");
+    }
+
+    @Test
+    void searchForwardsAppliedDateRangeAndNextScheduleSort() throws Exception {
+        java.time.LocalDate from = java.time.LocalDate.parse("2026-08-01");
+        java.time.LocalDate to = java.time.LocalDate.parse("2026-08-31");
+        given(positionService.search(eq(42L), isNull(), isNull(), isNull(), isNull(), isNull(),
+                eq(from), eq(to), eq(0), eq(20), eq("nextSchedule"), eq("asc")))
+                .willReturn(new TrackingDtos.PositionListResponse(List.of(), 0, 20, 0, 0));
+
+        mvc.perform(get("/api/v1/positions").with(authentication(authenticationFor(ALICE)))
+                        .param("appliedFrom", "2026-08-01").param("appliedTo", "2026-08-31")
+                        .param("sortBy", "nextSchedule").param("sortDir", "asc"))
+                .andExpect(status().isOk());
+
+        verify(positionService).search(42L, null, null, null, null, null, from, to, 0, 20, "nextSchedule", "asc");
     }
 
     @Test

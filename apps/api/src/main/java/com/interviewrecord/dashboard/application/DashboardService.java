@@ -51,7 +51,7 @@ public class DashboardService {
         long upcoming = scheduleService.countPendingWithin(userId, now, now.plus(Duration.ofDays(7)));
         Metrics metrics = new Metrics(total, active, upcoming, offers);
         var positionRows = positionService.search(userId, null, null, null, false, null,
-                0, POSITION_ROWS, "updatedAt", "desc").items();
+                null, null, 0, POSITION_ROWS, "updatedAt", "desc").items();
         return new DashboardResponse(metrics, positionRows,
                 scheduleService.upcomingForDashboard(userId, SCHEDULE_ROWS));
     }

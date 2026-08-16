@@ -42,12 +42,14 @@ public class PositionController {
             @RequestParam(required = false) String statusId,
             @RequestParam(required = false) Boolean archived,
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate appliedFrom,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate appliedTo,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String sortBy,
             @RequestParam(required = false) String sortDir) {
         return positionService.search(currentUser.require().id(), parseOrNull(companyId), parseOrNull(jobTypeId),
-                parseOrNull(statusId), archived, keyword, page, size, sortBy, sortDir);
+                parseOrNull(statusId), archived, keyword, appliedFrom, appliedTo, page, size, sortBy, sortDir);
     }
 
     @PostMapping

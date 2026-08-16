@@ -16,6 +16,16 @@ public interface JpaScheduleEventRepository extends JpaRepository<ScheduleEvent,
 
     List<ScheduleEvent> findAllByUserIdAndStatus(Long userId, String status);
 
+    /** 按下次日程排序需要的最早待处理时间：包括已逾期日程。 */
+    @Query("""
+            SELECT s FROM ScheduleEvent s WHERE s.userId = :userId AND s.status = 'PENDING'
+            AND s.positionId IN :positionIds
+            AND COALESCE(s.startsAt, s.endsAt) IS NOT NULL
+            ORDER BY COALESCE(s.startsAt, s.endsAt) ASC
+            """)
+    List<ScheduleEvent> findPendingForPositions(@Param("userId") Long userId,
+            @Param("positionIds") Collection<Long> positionIds);
+
     long countByUserIdAndPositionId(Long userId, Long positionId);
 
     long countByUserIdAndPositionIdIn(Long userId, Collection<Long> positionIds);
