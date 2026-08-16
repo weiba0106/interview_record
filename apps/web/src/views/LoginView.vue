@@ -1,15 +1,24 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import AuthLayout from '@/features/auth/components/AuthLayout.vue'
 import LoginForm from '@/features/auth/components/LoginForm.vue'
 
 const router = useRouter()
 </script>
 
 <template>
-  <main aria-labelledby="login-heading">
-    <h1 id="login-heading">登录</h1>
+  <AuthLayout
+    heading-id="login-heading"
+    eyebrow="欢迎回来"
+    title="继续你的求职进度"
+    description="登录后查看岗位进展、面试记录和即将到来的日程。"
+  >
     <LoginForm @submitted="router.push({ name: 'app' })" />
-    <RouterLink to="/forgot-password">忘记密码？</RouterLink>
-    <RouterLink to="/register">还没有账号？注册</RouterLink>
-  </main>
+    <template #footer>
+      <div class="auth-links">
+        <RouterLink to="/forgot-password">忘记密码？</RouterLink>
+        <RouterLink to="/register">还没有账号？立即注册</RouterLink>
+      </div>
+    </template>
+  </AuthLayout>
 </template>

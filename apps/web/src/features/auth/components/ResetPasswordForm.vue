@@ -27,14 +27,14 @@ async function submit() {
 </script>
 
 <template>
-  <form novalidate @submit.prevent="submit">
-    <p v-if="message" role="alert" tabindex="-1">{{ message }}</p>
+  <form class="auth-form" novalidate @submit.prevent="submit">
+    <p v-if="message" class="auth-alert" role="alert" tabindex="-1">{{ message }}</p>
     <label for="reset-password">新密码</label>
-    <ElInput id="reset-password" v-model="form.newPassword" name="newPassword" type="password" autocomplete="new-password" show-password :aria-describedby="fieldErrors.newPassword ? 'reset-password-error' : undefined" />
-    <p v-if="fieldErrors.newPassword" id="reset-password-error" data-field-error="newPassword" role="alert">{{ fieldErrors.newPassword }}</p>
+    <ElInput id="reset-password" v-model="form.newPassword" name="newPassword" type="password" autocomplete="new-password" placeholder="请输入新密码" show-password :aria-describedby="fieldErrors.newPassword ? 'reset-password-error' : undefined" />
+    <p v-if="fieldErrors.newPassword" id="reset-password-error" class="auth-field-error" data-field-error="newPassword" role="alert">{{ fieldErrors.newPassword }}</p>
     <label for="reset-password-confirm">确认新密码</label>
-    <ElInput id="reset-password-confirm" v-model="form.confirmPassword" name="confirmPassword" type="password" autocomplete="new-password" show-password :aria-describedby="fieldErrors.confirmPassword ? 'reset-password-confirm-error' : undefined" />
-    <p v-if="fieldErrors.confirmPassword" id="reset-password-confirm-error" data-field-error="confirmPassword" role="alert">{{ fieldErrors.confirmPassword }}</p>
-    <ElButton native-type="submit" type="primary" :loading="pending" :disabled="pending">重置密码</ElButton>
+    <ElInput id="reset-password-confirm" v-model="form.confirmPassword" name="confirmPassword" type="password" autocomplete="new-password" placeholder="再次输入新密码" show-password :aria-describedby="fieldErrors.confirmPassword ? 'reset-password-confirm-error' : undefined" />
+    <p v-if="fieldErrors.confirmPassword" id="reset-password-confirm-error" class="auth-field-error" data-field-error="confirmPassword" role="alert">{{ fieldErrors.confirmPassword }}</p>
+    <ElButton class="auth-submit" native-type="submit" type="primary" :loading="pending" :disabled="pending">重置密码</ElButton>
   </form>
 </template>

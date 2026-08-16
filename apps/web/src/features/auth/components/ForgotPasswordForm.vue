@@ -22,12 +22,12 @@ async function submit() {
 </script>
 
 <template>
-  <form novalidate @submit.prevent="submit">
-    <p v-if="error" role="alert" tabindex="-1">{{ error }}</p>
+  <form class="auth-form" novalidate @submit.prevent="submit">
+    <p v-if="error" class="auth-alert" role="alert" tabindex="-1">{{ error }}</p>
     <p v-if="message" role="status">{{ message }}</p>
     <label for="forgot-email">邮箱</label>
-    <ElInput id="forgot-email" v-model="email" name="email" type="email" autocomplete="email" :aria-describedby="fieldErrors.email ? 'forgot-email-error' : undefined" />
-    <p v-if="fieldErrors.email" id="forgot-email-error" data-field-error="email" role="alert">{{ fieldErrors.email }}</p>
-    <ElButton native-type="submit" type="primary" :loading="pending" :disabled="pending">发送重置邮件</ElButton>
+    <ElInput id="forgot-email" v-model="email" name="email" type="email" autocomplete="email" placeholder="请输入注册邮箱" :aria-describedby="fieldErrors.email ? 'forgot-email-error' : undefined" />
+    <p v-if="fieldErrors.email" id="forgot-email-error" class="auth-field-error" data-field-error="email" role="alert">{{ fieldErrors.email }}</p>
+    <ElButton class="auth-submit" native-type="submit" type="primary" :loading="pending" :disabled="pending">发送重置邮件</ElButton>
   </form>
 </template>

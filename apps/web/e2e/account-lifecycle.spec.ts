@@ -34,6 +34,8 @@ test('register, verify, login, update preferences, reset, and delete', async ({ 
   let otherLoggedIn = false
   let otherDeleted = false
   let journeyFailed = false
+  let cleanupError = ''
+  const cleanupFailures: Error[] = []
   const otherContext = await browser.newContext()
   const otherPage = await otherContext.newPage()
 
@@ -57,7 +59,7 @@ test('register, verify, login, update preferences, reset, and delete', async ({ 
     await expect(page).toHaveURL(/\/app$/)
     primaryLoggedIn = true
 
-    await page.getByRole('link', { name: '账号设置' }).click()
+    await page.getByRole('link', { name: '设置' }).click()
     await page.getByLabel('显示名称').fill('已更新用户')
     await page.getByLabel('时区（IANA，例如 Asia/Shanghai）').fill('Asia/Tokyo')
     const theme = page.getByRole('combobox', { name: '主题' })
@@ -125,7 +127,6 @@ test('register, verify, login, update preferences, reset, and delete', async ({ 
     journeyFailed = true
     throw error
   } finally {
-    const cleanupFailures: Error[] = []
     try {
       if (otherRegistered && otherVerified && !otherDeleted) {
         try {
@@ -171,7 +172,9 @@ test('register, verify, login, update preferences, reset, and delete', async ({ 
     if (cleanupFailures.length > 0) {
       const description = `Could not complete ${cleanupFailures.length} authenticated E2E cleanup operation(s).`
       if (journeyFailed) test.info().annotations.push({ type: 'cleanup-failure', description })
-      else throw new Error(description, { cause: cleanupFailures[0] })
+      else cleanupError = description
     }
   }
+  // no-unsafe-finally：不在 finally 中 throw，改为在清理结束后抛出
+  if (cleanupError) throw new Error(cleanupError, { cause: cleanupFailures[0] })
 })

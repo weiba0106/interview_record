@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import AuthLayout from '@/features/auth/components/AuthLayout.vue'
 import { verifyEmail } from '@/features/auth/api/auth.api'
 import { isApiRequestError } from '@/shared/api/error'
 
@@ -18,5 +19,11 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main aria-live="polite"><h1>邮箱验证</h1><p :role="state === 'error' ? 'alert' : 'status'">{{ message }}</p><RouterLink v-if="state !== 'loading'" to="/login">前往登录</RouterLink></main>
+  <AuthLayout heading-id="verify-heading" eyebrow="账号验证" title="邮箱验证" description="验证成功后即可登录并开始记录求职进度。">
+    <div class="auth-success" aria-live="polite">
+      <span class="auth-success-icon" aria-hidden="true">{{ state === 'loading' ? '…' : state === 'success' ? '✓' : '!' }}</span>
+      <p :class="{ 'auth-alert': state === 'error' }" :role="state === 'error' ? 'alert' : 'status'">{{ message }}</p>
+      <RouterLink v-if="state !== 'loading'" to="/login">前往登录</RouterLink>
+    </div>
+  </AuthLayout>
 </template>
