@@ -99,6 +99,11 @@ public class GlobalExceptionHandler {
         return response(HttpStatus.BAD_REQUEST, exception.code(), exception.getMessage(), Map.of());
     }
 
+    @ExceptionHandler(ExportLinkExpiredException.class)
+    ResponseEntity<ApiError> handleExportLinkExpired(ExportLinkExpiredException exception) {
+        return response(HttpStatus.GONE, "EXPORT_LINK_EXPIRED", "下载链接已失效或已被使用", Map.of());
+    }
+
     @ExceptionHandler(RateLimitExceededException.class)
     ResponseEntity<ApiError> handleRateLimit(RateLimitExceededException exception) {
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)

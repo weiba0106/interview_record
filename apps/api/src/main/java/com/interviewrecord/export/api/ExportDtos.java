@@ -32,7 +32,7 @@ public final class ExportDtos {
 
     public record ScheduleExport(Long id, String title, String eventType, Instant startsAt, Instant endsAt,
             Long positionId, Long interviewRoundId, String location, String notes, String status,
-            String manualUrgency, Instant createdAt, Instant updatedAt) {}
+            String manualUrgency, String reminderOffsets, Instant createdAt, Instant updatedAt) {}
 
     public record PreferenceExport(String timeZone, Theme theme, List<Integer> interviewReminderOffsets,
             List<Integer> deadlineReminderOffsets) {}
@@ -41,4 +41,7 @@ public final class ExportDtos {
             List<JobTypeExport> jobTypes, List<PositionStatusExport> statuses, List<PositionExport> positions,
             List<InterviewRoundExport> interviewRounds, List<InterviewQuestionExport> interviewQuestions,
             List<ScheduleExport> schedules, PreferenceExport preferences) {}
+
+    /** 生成导出后的响应：一次性下载令牌（30 分钟有效）与文件名。 */
+    public record ExportCreatedResponse(String token, String fileName, Instant expiresAt) {}
 }

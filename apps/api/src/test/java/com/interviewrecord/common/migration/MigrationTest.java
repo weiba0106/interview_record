@@ -19,7 +19,7 @@ class MigrationTest extends MySqlIntegrationTestBase {
 
     @Test
     void appliesAccountAndSessionMigrations() {
-        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("9");
+        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("10");
 
         Integer users = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM information_schema.tables "
@@ -72,6 +72,18 @@ class MigrationTest extends MySqlIntegrationTestBase {
                     Integer.class, richTextColumn[0], richTextColumn[1]);
             assertThat(longText).as("longtext %s.%s", richTextColumn[0], richTextColumn[1]).isEqualTo(1);
         }
+
+        Integer exportFilesTable = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE()"
+                        + " AND table_name = 'export_files'",
+                Integer.class);
+        assertThat(exportFilesTable).isEqualTo(1);
+
+        Integer exportTokenColumn = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE()"
+                        + " AND table_name = 'export_files' AND column_name = 'token_hash' AND data_type = 'binary'",
+                Integer.class);
+        assertThat(exportTokenColumn).isEqualTo(1);
     }
 
     @Test
