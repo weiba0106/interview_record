@@ -27,6 +27,8 @@ const routeLabels: Record<string, string> = {
   'new-position': '新增岗位',
   'position-detail': '岗位详情',
   'edit-position': '编辑岗位',
+  'company-detail': '公司详情',
+  'schedule-detail': '日程详情',
 }
 const currentLabel = computed(() => {
   const name = typeof route.name === 'string' ? route.name : ''

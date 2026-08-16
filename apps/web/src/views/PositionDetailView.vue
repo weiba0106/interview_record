@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, useTemplateRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElButton, ElDialog, ElTag } from 'element-plus'
 import InterviewRoundForm from '@/features/interviews/components/InterviewRoundForm.vue'
@@ -34,6 +34,7 @@ const deleteRoundTarget = ref<InterviewRound | null>(null)
 const deletePositionDialogOpen = ref(false)
 const pendingDelete = ref(false)
 const shareDialogOpen = ref(false)
+const roundFormRef = useTemplateRef<InstanceType<typeof InterviewRoundForm>>('round-form')
 
 const sortedRounds = computed(() => [...rounds.value].sort((a, b) => a.roundNumber - b.roundNumber))
 const nextRoundNumber = computed(() => {
@@ -79,6 +80,7 @@ async function submitRound(payload: RoundRequest) {
       rounds.value = [...rounds.value, created]
       message.value = '面试轮次已创建'
     }
+    roundFormRef.value?.clearDraft()
     roundDialogOpen.value = false
     await refreshPosition()
   } catch (caught) {
@@ -220,6 +222,7 @@ async function confirmDeletePosition() {
 
       <ElDialog v-model="roundDialogOpen" :title="editingRound ? '编辑面试轮次' : `新增面试轮次（默认第 ${nextRoundNumber} 轮）`" width="min(94vw, 640px)" top="6vh" :teleported="false">
         <InterviewRoundForm
+          ref="round-form"
           :initial="editingRound"
           :default-round-number="nextRoundNumber"
           @submitted="submitRound"

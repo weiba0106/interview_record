@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, useTemplateRef } from 'vue'
 import { ElButton, ElDialog } from 'element-plus'
 import CompanyForm from '@/features/tracking/components/CompanyForm.vue'
 import JobTypeManager from '@/features/tracking/components/JobTypeManager.vue'
@@ -23,6 +23,7 @@ const duplicatePayload = ref<CompanyRequest | null>(null)
 const deleteDialogOpen = ref(false)
 const deleteDetail = ref<CompanyDetail | null>(null)
 const pendingDelete = ref(false)
+const companyFormRef = useTemplateRef<InstanceType<typeof CompanyForm>>('company-form')
 
 async function load() {
   loading.value = true
@@ -60,6 +61,7 @@ async function submitCompany(payload: CompanyRequest) {
       await createCompany(payload)
       message.value = '公司已创建'
     }
+    companyFormRef.value?.clearDraft()
     formDialogOpen.value = false
     await load()
   } catch (caught) {
@@ -131,7 +133,7 @@ async function confirmDelete() {
           </thead>
           <tbody>
             <tr v-for="company in companies" :key="company.id" :data-testid="`company-${company.id}`">
-              <td class="cell-strong">{{ company.name }}</td>
+              <td class="cell-strong"><RouterLink :to="{ name: 'company-detail', params: { id: company.id } }">{{ company.name }}</RouterLink></td>
               <td><a v-if="company.website" :href="company.website" target="_blank" rel="noopener noreferrer">{{ company.website }}</a><span v-else>—</span></td>
               <td>{{ company.positionCount }}</td>
               <td class="notes-cell">{{ company.notes ?? '—' }}</td>
@@ -156,7 +158,7 @@ async function confirmDelete() {
     </div>
 
     <ElDialog v-model="formDialogOpen" :title="editing ? '编辑公司' : '新增公司'" width="min(92vw, 520px)" :teleported="false">
-      <CompanyForm :initial="formInitial" @submitted="submitCompany" />
+      <CompanyForm ref="company-form" :initial="formInitial" @submitted="submitCompany" />
     </ElDialog>
 
     <ElDialog v-model="duplicateDialogOpen" title="可能存在重复公司" width="min(92vw, 420px)" :teleported="false">

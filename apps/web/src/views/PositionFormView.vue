@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, useTemplateRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElButton } from 'element-plus'
 import PositionForm from '@/features/tracking/components/PositionForm.vue'
@@ -44,6 +44,7 @@ async function submit(payload: PositionRequest) {
     const saved = isEdit.value
       ? await updatePosition(positionId.value, payload)
       : await createPosition(payload)
+    positionFormRef.value?.clearDraft()
     await router.push({ name: 'position-detail', params: { id: saved.id } })
   } catch (caught) {
     if (isApiRequestError(caught) && caught.status === 409) {
@@ -53,6 +54,8 @@ async function submit(payload: PositionRequest) {
     error.value = isApiRequestError(caught) ? caught.apiError.message : '保存失败，请稍后重试'
   }
 }
+
+const positionFormRef = useTemplateRef<InstanceType<typeof PositionForm>>('position-form')
 </script>
 
 <template>
@@ -71,10 +74,12 @@ async function submit(payload: PositionRequest) {
     <p v-if="loading" role="status">加载中…</p>
     <PositionForm
       v-else
+      ref="position-form"
       :companies="companies"
       :job-types="jobTypes"
       :statuses="statuses"
       :position="position"
+      :initial-company-id="typeof route.query.company === 'string' ? route.query.company : undefined"
       :submit-label="isEdit ? '保存修改' : '创建岗位'"
       @submitted="submit"
     />

@@ -2,6 +2,7 @@
 import { reactive, ref } from 'vue'
 import { ElButton, ElCheckbox, ElInput, ElOption, ElSelect } from 'element-plus'
 import RichTextEditor from '@/shared/components/RichTextEditor.vue'
+import { useFormDraft } from '@/shared/forms/useFormDraft'
 import type { Company, JobType, Position, PositionRequest, PositionStatus } from '../api/tracking.types'
 import { fromDateInput, fromDatetimeInput, toDateInput, toDatetimeInput } from '@/shared/format/datetime'
 
@@ -11,13 +12,15 @@ const props = defineProps<{
   statuses: PositionStatus[]
   position?: Position | null
   submitLabel?: string
+  /** 从公司详情页“新增岗位”进入时预选的公司 */
+  initialCompanyId?: string
 }>()
 const emit = defineEmits<{ submitted: [payload: PositionRequest] }>()
 const fieldErrors = ref<Record<string, string>>({})
 
 const firstStatusId = props.statuses.find((status) => status.active)?.id ?? ''
 const form = reactive({
-  companyId: props.position?.companyId ?? '',
+  companyId: props.position?.companyId ?? props.initialCompanyId ?? '',
   newCompanyName: '',
   title: props.position?.title ?? '',
   jobTypeId: props.position?.jobTypeId ?? '',
@@ -29,7 +32,25 @@ const form = reactive({
   description: props.position?.description ?? '',
   createDeadlineSchedule: false,
 })
-const creatingNewCompany = ref(props.companies.length === 0)
+const creatingNewCompany = ref(props.companies.length === 0 && !form.companyId)
+
+/** PRD §12：未提交的表单内容保留到当前会话，断网刷新后可恢复并重试。 */
+const draft = useFormDraft('position-form')
+const savedDraft = draft.restore()
+for (const field of ['title', 'companyId', 'newCompanyName', 'jobTypeId', 'statusId', 'applyUrl', 'appliedAt', 'deadlineAt', 'workLocation', 'description'] as const) {
+  const value = savedDraft[field]
+  // 草稿只填空位，真正的编辑数据优先
+  if (typeof value === 'string' && !(form as unknown as Record<string, string>)[field]) {
+    ;(form as unknown as Record<string, string>)[field] = value
+  }
+}
+draft.startWatching(() => ({
+  title: form.title, companyId: form.companyId, newCompanyName: form.newCompanyName,
+  jobTypeId: form.jobTypeId, statusId: form.statusId, applyUrl: form.applyUrl,
+  appliedAt: form.appliedAt, deadlineAt: form.deadlineAt, workLocation: form.workLocation,
+  description: form.description,
+}))
+defineExpose({ clearDraft: draft.clear })
 
 function toggleCompanyMode() {
   creatingNewCompany.value = !creatingNewCompany.value

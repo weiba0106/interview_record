@@ -5,6 +5,7 @@ import { SCHEDULE_EVENT_TYPES, type Schedule, type ScheduleRequest } from '../ap
 import { listRounds, type InterviewRound } from '@/features/interviews/api/interviews.api'
 import type { PositionSummary } from '@/features/tracking/api/tracking.types'
 import { fromDatetimeInput, toDatetimeInput } from '@/shared/format/datetime'
+import { useFormDraft } from '@/shared/forms/useFormDraft'
 
 const props = defineProps<{
   initial?: Schedule | null
@@ -49,6 +50,22 @@ watch(() => form.positionId, (positionId) => {
 onMounted(() => {
   if (form.positionId) void loadRounds(form.positionId)
 })
+
+/** PRD §12：未提交的表单内容保留到当前会话，断网刷新后可恢复并重试。 */
+const draft = useFormDraft('schedule-form')
+const savedDraft = draft.restore()
+for (const field of ['title', 'eventType', 'startsAt', 'endsAt', 'positionId', 'interviewRoundId', 'location', 'notes', 'reminderOffsets'] as const) {
+  const value = savedDraft[field]
+  if (typeof value === 'string' && !(form as unknown as Record<string, string>)[field]) {
+    ;(form as unknown as Record<string, string>)[field] = value
+  }
+}
+draft.startWatching(() => ({
+  title: form.title, eventType: form.eventType, startsAt: form.startsAt, endsAt: form.endsAt,
+  positionId: form.positionId, interviewRoundId: form.interviewRoundId, location: form.location,
+  notes: form.notes, reminderOffsets: form.reminderOffsets,
+}))
+defineExpose({ clearDraft: draft.clear })
 
 /** 返回 undefined=不改动（创建时即默认规则），[]=关闭，否则为自定义分钟列表；校验失败返回 null。 */
 function resolveReminderOffsets(): number[] | undefined | null {

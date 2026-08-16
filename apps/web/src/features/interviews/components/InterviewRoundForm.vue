@@ -2,6 +2,7 @@
 import { reactive, ref } from 'vue'
 import { ElButton, ElCheckbox, ElInput, ElOption, ElSelect } from 'element-plus'
 import RichTextEditor from '@/shared/components/RichTextEditor.vue'
+import { useFormDraft } from '@/shared/forms/useFormDraft'
 import { INTERVIEW_RESULTS, INTERVIEW_TYPES, type InterviewRound, type RoundRequest } from '../api/interviews.api'
 import { fromDatetimeInput, toDatetimeInput } from '@/shared/format/datetime'
 
@@ -42,6 +43,27 @@ function addQuestion() {
 function removeQuestion(index: number) {
   questions.value.splice(index, 1)
 }
+
+/** PRD §12：未提交的表单内容保留到当前会话，断网刷新后可恢复并重试。 */
+const draft = useFormDraft('interview-round-form')
+const savedDraft = draft.restore()
+for (const field of ['roundName', 'interviewType', 'startsAt', 'endsAt', 'location', 'result', 'processNotes', 'reviewSummary'] as const) {
+  const value = savedDraft[field]
+  if (typeof value === 'string' && !(form as unknown as Record<string, string>)[field]) {
+    ;(form as unknown as Record<string, string>)[field] = value
+  }
+}
+if (typeof savedDraft.roundNumber === 'number') form.roundNumber = savedDraft.roundNumber
+if (Array.isArray(savedDraft.questions) && questions.value.length === 0) {
+  questions.value = savedDraft.questions as QuestionDraft[]
+}
+draft.startWatching(() => ({
+  roundName: form.roundName, roundNumber: form.roundNumber, interviewType: form.interviewType,
+  startsAt: form.startsAt, endsAt: form.endsAt, location: form.location, result: form.result,
+  processNotes: form.processNotes, reviewSummary: form.reviewSummary,
+  questions: questions.value,
+}))
+defineExpose({ clearDraft: draft.clear })
 
 function submit() {
   fieldErrors.value = {}

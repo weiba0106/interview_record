@@ -271,6 +271,7 @@ async function setStatus(schedule: Schedule, status: 'COMPLETED' | 'CANCELLED') 
                   <div class="event-actions">
                     <ElButton size="small" :data-action="`complete-${schedule.id}`" @click="setStatus(schedule, 'COMPLETED')">完成</ElButton>
                     <ElButton size="small" text :data-action="`cancel-${schedule.id}`" @click="setStatus(schedule, 'CANCELLED')">取消</ElButton>
+                    <RouterLink class="row-action" :to="{ name: 'schedule-detail', params: { id: schedule.id } }">详情</RouterLink>
                   </div>
                 </article>
               </template>

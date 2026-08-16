@@ -38,11 +38,19 @@ function scheduleFixture(overrides: Record<string, unknown> = {}) {
 async function mountView() {
   const router = createRouter({
     history: createMemoryHistory(),
-    routes: [{ path: '/app/schedules', name: 'schedules', component: { template: '<div />' } }],
+    routes: [
+      { path: '/app/schedules', name: 'schedules', component: { template: '<div />' } },
+      { path: '/app/schedules/:id', name: 'schedule-detail', component: { template: '<div />' } },
+    ],
   })
   await router.push('/app/schedules')
   await router.isReady()
-  return mount(SchedulesView, { global: { plugins: [createPinia(), ElementPlus, router] } })
+  return mount(SchedulesView, {
+    global: {
+      plugins: [createPinia(), ElementPlus, router],
+      stubs: { RouterLink: { template: '<a v-bind="$attrs"><slot /></a>', props: ['to'] } },
+    },
+  })
 }
 
 describe('SchedulesView', () => {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { ElButton, ElInput } from 'element-plus'
+import { useFormDraft } from '@/shared/forms/useFormDraft'
 import type { CompanyRequest } from '../api/tracking.types'
 
 const props = defineProps<{ initial?: CompanyRequest | null; submitLabel?: string }>()
@@ -11,6 +12,18 @@ const form = reactive({
   website: props.initial?.website ?? '',
   notes: props.initial?.notes ?? '',
 })
+
+/** PRD §12：未提交的表单内容保留到当前会话，断网刷新后可恢复并重试。 */
+const draft = useFormDraft('company-form')
+const savedDraft = draft.restore()
+for (const field of ['name', 'website', 'notes'] as const) {
+  const value = savedDraft[field]
+  if (typeof value === 'string' && !(form as unknown as Record<string, string>)[field]) {
+    ;(form as unknown as Record<string, string>)[field] = value
+  }
+}
+draft.startWatching(() => ({ name: form.name, website: form.website, notes: form.notes }))
+defineExpose({ clearDraft: draft.clear })
 
 function submit() {
   fieldErrors.value = {}

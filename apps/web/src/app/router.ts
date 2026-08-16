@@ -3,10 +3,12 @@ import { useAuthStore } from '@/shared/auth/auth.store'
 import type { AuthStatus } from '@/shared/auth/auth.types'
 import DashboardView from '@/views/DashboardView.vue'
 import CompaniesView from '@/views/CompaniesView.vue'
+import CompanyDetailView from '@/views/CompanyDetailView.vue'
 import PositionsView from '@/views/PositionsView.vue'
 import PositionFormView from '@/views/PositionFormView.vue'
 import PositionDetailView from '@/views/PositionDetailView.vue'
 import SchedulesView from '@/views/SchedulesView.vue'
+import ScheduleDetailView from '@/views/ScheduleDetailView.vue'
 import ForgotPasswordView from '@/views/ForgotPasswordView.vue'
 import LoginView from '@/views/LoginView.vue'
 import RegisterView from '@/views/RegisterView.vue'
@@ -35,11 +37,13 @@ export function createAppRouter() {
       { path: '/share/:token', name: 'public-share', component: PublicShareView },
       { path: '/app', name: 'app', component: DashboardView, meta: { requiresAuth: true } },
       { path: '/app/companies', name: 'companies', component: CompaniesView, meta: { requiresAuth: true } },
+      { path: '/app/companies/:id', name: 'company-detail', component: CompanyDetailView, meta: { requiresAuth: true } },
       { path: '/app/positions', name: 'positions', component: PositionsView, meta: { requiresAuth: true } },
       { path: '/app/positions/new', name: 'new-position', component: PositionFormView, meta: { requiresAuth: true } },
       { path: '/app/positions/:id', name: 'position-detail', component: PositionDetailView, meta: { requiresAuth: true } },
       { path: '/app/positions/:id/edit', name: 'edit-position', component: PositionFormView, meta: { requiresAuth: true } },
       { path: '/app/schedules', name: 'schedules', component: SchedulesView, meta: { requiresAuth: true } },
+      { path: '/app/schedules/:id', name: 'schedule-detail', component: ScheduleDetailView, meta: { requiresAuth: true } },
       { path: '/app/insights', name: 'insights', component: InsightsView, meta: { requiresAuth: true } },
       { path: '/app/settings', name: 'settings', component: SettingsView, meta: { requiresAuth: true } },
     ],
