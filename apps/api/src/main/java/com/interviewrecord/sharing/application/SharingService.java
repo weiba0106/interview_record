@@ -31,9 +31,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.stereotype.Service;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@ConditionalOnExpression("'${spring.datasource.url:}' != ''")
 public class SharingService {
     private static final Set<String> POSITION_FIELDS = Set.of("COMPANY_NAME", "POSITION_TITLE", "JOB_TYPE", "STATUS");
     private static final Set<String> ROUND_FIELDS = Set.of("BASIC_INFO", "QUESTIONS", "ANSWERS", "PROCESS", "REVIEW", "RESULT");

@@ -22,12 +22,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 
 /**
  * Calculates a user's statistics from user-scoped repositories only.  The service deliberately
  * receives the authenticated user id from its caller rather than accepting it from the browser.
  */
 @Service
+@ConditionalOnExpression("'${spring.datasource.url:}' != ''")
 public class InsightsService {
     private final JpaPositionRepository positions;
     private final JpaInterviewRoundRepository rounds;

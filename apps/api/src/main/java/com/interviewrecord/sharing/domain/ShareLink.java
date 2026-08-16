@@ -17,7 +17,7 @@ public class ShareLink {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
     @Column(name = "user_id", nullable = false) private Long userId;
     @Column(name = "position_id", nullable = false) private Long positionId;
-    @Column(name = "token_hash", nullable = false, length = 32) private byte[] tokenHash;
+    @Column(name = "token_hash", nullable = false, columnDefinition = "BINARY(32)") private byte[] tokenHash;
     @Column(name = "position_fields", nullable = false, length = 255) private String positionFieldsValue;
     @Column(name = "expires_at") private Instant expiresAt;
     @Column(name = "revoked_at") private Instant revokedAt;
