@@ -7,8 +7,10 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import java.sql.Types;
 import java.time.Instant;
 import java.util.Set;
+import org.hibernate.annotations.JdbcTypeCode;
 
 @Entity
 @Table(name = "interview_rounds")
@@ -27,8 +29,10 @@ public class InterviewRound {
     @Column(length = 500) private String location;
     @Column(nullable = false, length = 20) private String result;
     /** 富文本字段（服务端白名单清洗后存储），V9 起为 LONGTEXT。 */
-    @Column(name = "process_notes", columnDefinition = "LONGTEXT") private String processNotes;
-    @Column(name = "review_summary", columnDefinition = "LONGTEXT") private String reviewSummary;
+    @JdbcTypeCode(Types.LONGVARCHAR)
+    @Column(name = "process_notes") private String processNotes;
+    @JdbcTypeCode(Types.LONGVARCHAR)
+    @Column(name = "review_summary") private String reviewSummary;
     @Version private long version;
     @Column(name = "created_at", nullable = false, updatable = false) private Instant createdAt;
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;

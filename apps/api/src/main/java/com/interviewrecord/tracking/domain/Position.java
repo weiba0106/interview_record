@@ -7,8 +7,10 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import java.sql.Types;
 import java.time.Instant;
 import java.time.LocalDate;
+import org.hibernate.annotations.JdbcTypeCode;
 
 @Entity
 @Table(name = "positions")
@@ -24,7 +26,8 @@ public class Position {
     @Column(name = "deadline_at") private Instant deadlineAt;
     @Column(name = "work_location", length = 100) private String workLocation;
     /** 富文本（服务端白名单清洗后存储），V9 起为 LONGTEXT。 */
-    @Column(columnDefinition = "LONGTEXT") private String description;
+    @JdbcTypeCode(Types.LONGVARCHAR)
+    @Column private String description;
     @Column(nullable = false) private boolean archived;
     @Version private long version;
     @Column(name = "created_at", nullable = false, updatable = false) private Instant createdAt;

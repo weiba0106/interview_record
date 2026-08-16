@@ -5,9 +5,10 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
+import java.sql.Types;
 import java.time.Instant;
+import org.hibernate.annotations.JdbcTypeCode;
 
 /** 一次性导出文件：令牌只存摘要，下载后失效，30 分钟过期。 */
 @Entity
@@ -18,7 +19,9 @@ public class ExportFile {
     @Column(name = "token_hash", nullable = false, columnDefinition = "BINARY(32)") private byte[] tokenHash;
     @Column(name = "file_name", nullable = false, length = 120) private String fileName;
     @Column(name = "content_type", nullable = false, length = 64) private String contentType;
-    @Lob @Column(nullable = false) private byte[] payload;
+    /** LONGBLOB（V10）：与 Hibernate 校验的 JDBC 类型保持一致，避免 tinyblob 误匹配。 */
+    @JdbcTypeCode(Types.LONGVARBINARY)
+    @Column(nullable = false) private byte[] payload;
     @Column(name = "expires_at", nullable = false) private Instant expiresAt;
     @Column(name = "downloaded_at") private Instant downloadedAt;
     @Column(name = "created_at", nullable = false, updatable = false) private Instant createdAt;
