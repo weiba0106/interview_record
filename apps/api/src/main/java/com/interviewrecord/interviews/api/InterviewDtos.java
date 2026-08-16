@@ -40,4 +40,12 @@ public final class InterviewDtos {
             long version, Instant createdAt, Instant updatedAt) {}
 
     public record RoundListResponse(List<RoundResponse> items) {}
+
+    /** 题库条目：题目 + 回答 + 分类 + 所属轮次/岗位/公司上下文。 */
+    public record QuestionBankItem(String id, String question, String answer, String category,
+            String roundId, Integer roundNumber, String roundName, String positionId, String positionTitle,
+            String companyName, Instant createdAt) {}
+
+    public record QuestionBankPage(List<QuestionBankItem> items, int page, int size,
+            long totalItems, int totalPages) {}
 }

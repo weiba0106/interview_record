@@ -23,6 +23,8 @@ import com.interviewrecord.common.security.JsonAuthenticationEntryPoint;
 import com.interviewrecord.interviews.application.InterviewService;
 import com.interviewrecord.preference.domain.Theme;
 import com.interviewrecord.tracking.api.PositionController;
+import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
@@ -106,6 +108,43 @@ class InterviewRoundApiTest {
                         .with(authentication(authenticationFor(BOB))))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
+    }
+
+    @Test
+    void questionBankSearchRequiresAuthentication() throws Exception {
+        mvc.perform(get("/api/v1/interview-rounds/questions"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+    }
+
+    @Test
+    void questionBankSearchForwardsFiltersAndPaginationScopedByUser() throws Exception {
+        given(interviewService.searchQuestions(42L, "算法", "动态规划", 1, 20))
+                .willReturn(new InterviewDtos.QuestionBankPage(List.of(), 1, 20, 0, 0));
+
+        mvc.perform(get("/api/v1/interview-rounds/questions")
+                        .with(authentication(authenticationFor(ALICE)))
+                        .param("category", "算法").param("keyword", "动态规划").param("page", "1").param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items").isArray());
+
+        verify(interviewService).searchQuestions(42L, "算法", "动态规划", 1, 20);
+    }
+
+    @Test
+    void randomQuestionsAreScopedByTheAuthenticatedUser() throws Exception {
+        given(interviewService.randomQuestions(42L, 10))
+                .willReturn(List.of(new InterviewDtos.QuestionBankItem("1", "自我介绍", "回答", "项目",
+                        "r1", 1, "一面", "p1", "后端开发工程师", "示例科技",
+                        Instant.parse("2026-08-13T00:00:00Z"))));
+
+        mvc.perform(get("/api/v1/interview-rounds/questions/random")
+                        .with(authentication(authenticationFor(ALICE))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].question").value("自我介绍"))
+                .andExpect(jsonPath("$[0].companyName").value("示例科技"));
+
+        verify(interviewService).randomQuestions(42L, 10);
     }
 
     private UsernamePasswordAuthenticationToken authenticationFor(AuthenticatedUser user) {

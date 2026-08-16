@@ -11,6 +11,9 @@ public interface JpaInterviewRoundRepository extends JpaRepository<InterviewRoun
 
     List<InterviewRound> findAllByUserId(Long userId);
 
+    /** 题库聚合用的批量轮次查询。 */
+    List<InterviewRound> findAllByUserIdAndIdIn(Long userId, Collection<Long> ids);
+
     @org.springframework.data.jpa.repository.Query("""
             SELECT r FROM InterviewRound r WHERE r.userId = :userId AND r.positionId = :positionId
             ORDER BY CASE WHEN r.startsAt IS NULL THEN 1 ELSE 0 END ASC, r.startsAt ASC, r.roundNumber ASC

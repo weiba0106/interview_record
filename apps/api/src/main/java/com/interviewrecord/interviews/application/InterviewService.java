@@ -4,6 +4,7 @@ import com.interviewrecord.common.error.ConflictException;
 import com.interviewrecord.common.error.InvalidInputException;
 import com.interviewrecord.common.error.NotFoundException;
 import com.interviewrecord.common.html.RichTextSanitizer;
+import com.interviewrecord.interviews.api.InterviewDtos;
 import com.interviewrecord.interviews.api.InterviewDtos.QuestionResponse;
 import com.interviewrecord.interviews.api.InterviewDtos.RoundRequest;
 import com.interviewrecord.interviews.api.InterviewDtos.RoundResponse;
@@ -19,7 +20,11 @@ import com.interviewrecord.tracking.infrastructure.JpaPositionRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -147,6 +152,80 @@ public class InterviewService {
 
     private String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private static final int QUESTION_BANK_MAX_PAGE_SIZE = 100;
+    private static final int QUESTION_BANK_MAX_RANDOM = 20;
+
+    /** 题库分页检索：仅限当前用户，支持分类与关键词过滤。 */
+    @Transactional(readOnly = true)
+    public InterviewDtos.QuestionBankPage searchQuestions(Long userId, String category, String keyword,
+            int page, int size) {
+        int safePage = Math.max(0, page);
+        int safeSize = Math.min(Math.max(1, size), QUESTION_BANK_MAX_PAGE_SIZE);
+        Page<InterviewQuestion> result = questions.searchQuestions(userId, blankToNull(category),
+                blankToNull(keyword), PageRequest.of(safePage, safeSize));
+        QuestionContext context = questionContext(userId, result.getContent());
+        List<InterviewDtos.QuestionBankItem> items = result.getContent().stream()
+                .map(question -> toQuestionBankItem(question, context))
+                .toList();
+        return new InterviewDtos.QuestionBankPage(items, result.getNumber(), result.getSize(),
+                result.getTotalElements(), result.getTotalPages());
+    }
+
+    /** 随机抽题：从随机页位置取一批，供复习页“随机抽题/换一批”。 */
+    @Transactional(readOnly = true)
+    public List<InterviewDtos.QuestionBankItem> randomQuestions(Long userId, int limit) {
+        long total = questions.countByUserId(userId);
+        if (total == 0) return List.of();
+        int safeLimit = Math.min(Math.max(1, limit), QUESTION_BANK_MAX_RANDOM);
+        int maxPage = (int) ((total - 1) / safeLimit);
+        int randomPage = java.util.concurrent.ThreadLocalRandom.current().nextInt(maxPage + 1);
+        List<InterviewQuestion> picked = questions.searchQuestions(userId, null, null,
+                PageRequest.of(randomPage, safeLimit, Sort.by(Sort.Direction.DESC, "createdAt"))).getContent();
+        QuestionContext context = questionContext(userId, picked);
+        List<InterviewDtos.QuestionBankItem> items = new java.util.ArrayList<>(
+                picked.stream().map(question -> toQuestionBankItem(question, context)).toList());
+        java.util.Collections.shuffle(items);
+        return items;
+    }
+
+    /** 题库分类列表：仅当前用户的去重分类。 */
+    @Transactional(readOnly = true)
+    public List<String> questionCategories(Long userId) {
+        return questions.findCategoriesByUserId(userId);
+    }
+
+    private record QuestionContext(Map<Long, InterviewRound> roundsById,
+            Map<Long, Position> positionsById, Map<Long, String> companyNames) {}
+
+    private QuestionContext questionContext(Long userId, List<InterviewQuestion> page) {
+        List<Long> roundIds = page.stream().map(InterviewQuestion::roundId).distinct().toList();
+        Map<Long, InterviewRound> roundsById = roundIds.isEmpty() ? Map.of()
+                : rounds.findAllByUserIdAndIdIn(userId, roundIds).stream()
+                        .collect(java.util.stream.Collectors.toMap(InterviewRound::id, round -> round));
+        Map<Long, Position> positionsById = positions.findAllByUserId(userId).stream()
+                .collect(java.util.stream.Collectors.toMap(Position::id, position -> position));
+        List<Long> companyIds = positionsById.values().stream().map(Position::companyId).distinct().toList();
+        Map<Long, String> companyNames = companyIds.isEmpty() ? Map.of()
+                : companies.findAllByUserIdOrderByNameAsc(userId).stream()
+                        .filter(company -> companyIds.contains(company.id()))
+                        .collect(java.util.stream.Collectors.toMap(Company::id, Company::name));
+        return new QuestionContext(roundsById, positionsById, companyNames);
+    }
+
+    private InterviewDtos.QuestionBankItem toQuestionBankItem(InterviewQuestion question, QuestionContext context) {
+        InterviewRound round = context.roundsById().get(question.roundId());
+        Position position = round == null ? null : context.positionsById().get(round.positionId());
+        return new InterviewDtos.QuestionBankItem(Long.toString(question.id()), question.question(),
+                question.answer(), question.category(),
+                round == null ? null : Long.toString(round.id()),
+                round == null ? null : round.roundNumber(),
+                round == null ? null : round.roundName(),
+                position == null ? null : Long.toString(position.id()),
+                position == null ? null : position.title(),
+                position == null ? null : context.companyNames().get(position.companyId()),
+                question.createdAt());
     }
 
     private RoundResponse toResponse(Long userId, InterviewRound round) {
