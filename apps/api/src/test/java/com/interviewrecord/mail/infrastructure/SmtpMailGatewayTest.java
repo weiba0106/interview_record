@@ -12,27 +12,54 @@ import java.time.Instant;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 
 class SmtpMailGatewayTest {
 
+    private MimeMessage newMessage() {
+        return new MimeMessage(Session.getInstance(new Properties()));
+    }
+
     @Test
-    void setsFromHeaderToTheAuthenticatedMailbox() {
+    void setsFromHeaderToTheAuthenticatedMailboxOnVerificationEmail() throws Exception {
         JavaMailSender sender = mock(JavaMailSender.class);
+        MimeMessage message = newMessage();
+        given(sender.createMimeMessage()).willReturn(message);
         SmtpMailGateway gateway = new SmtpMailGateway(sender, "http://localhost:5173", "2263945169@qq.com");
 
         gateway.sendVerificationEmail("recipient@example.com", "raw-token");
 
-        ArgumentCaptor<SimpleMailMessage> messages = ArgumentCaptor.forClass(SimpleMailMessage.class);
-        verify(sender).send(messages.capture());
-        assertThat(messages.getValue().getFrom()).isEqualTo("2263945169@qq.com");
+        ArgumentCaptor<MimeMessage> capture = ArgumentCaptor.forClass(MimeMessage.class);
+        verify(sender).send(capture.capture());
+        assertThat(capture.getValue().getFrom()[0].toString()).isEqualTo("2263945169@qq.com");
+
+        String html = capture.getValue().getContent().toString();
+        assertThat(html).contains("账号验证", "验证你的邮箱", "完成邮箱验证");
+        assertThat(html).contains("http://localhost:5173/verify-email?token=raw-token");
+        assertThat(html).contains("如果你没有注册过面试记录账号，请忽略这封邮件。");
+    }
+
+    @Test
+    void passwordResetEmailIsFormattedHtmlWithTheResetLink() throws Exception {
+        JavaMailSender sender = mock(JavaMailSender.class);
+        MimeMessage message = newMessage();
+        given(sender.createMimeMessage()).willReturn(message);
+        SmtpMailGateway gateway = new SmtpMailGateway(sender, "http://localhost:5173", "2263945169@qq.com");
+
+        gateway.sendPasswordResetEmail("recipient@example.com", "reset-token");
+
+        ArgumentCaptor<MimeMessage> capture = ArgumentCaptor.forClass(MimeMessage.class);
+        verify(sender).send(capture.capture());
+        String html = capture.getValue().getContent().toString();
+        assertThat(html).contains("账号安全", "重置密码", "设置新密码");
+        assertThat(html).contains("http://localhost:5173/reset-password?token=reset-token");
+        assertThat(html).contains("如果你没有申请重置密码，请忽略这封邮件。");
     }
 
     @Test
     void reminderEmailIsStructuredHtmlWithEscapedUserContent() throws Exception {
         JavaMailSender sender = mock(JavaMailSender.class);
-        MimeMessage message = new MimeMessage(Session.getInstance(new Properties()));
+        MimeMessage message = newMessage();
         given(sender.createMimeMessage()).willReturn(message);
 
         SmtpMailGateway gateway = new SmtpMailGateway(sender, "http://localhost:5173", "reminder@example.com");
@@ -66,7 +93,7 @@ class SmtpMailGatewayTest {
     @Test
     void missingCompanyAndPositionRenderAsPlaceholders() throws Exception {
         JavaMailSender sender = mock(JavaMailSender.class);
-        MimeMessage message = new MimeMessage(Session.getInstance(new Properties()));
+        MimeMessage message = newMessage();
         given(sender.createMimeMessage()).willReturn(message);
 
         SmtpMailGateway gateway = new SmtpMailGateway(sender, "http://localhost:5173", "reminder@example.com");

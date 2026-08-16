@@ -10,7 +10,6 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
@@ -30,24 +29,59 @@ public class SmtpMailGateway implements MailGateway {
 
     @Override
     public void sendVerificationEmail(String email, String rawToken) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(fromAddress);
-        message.setTo(email);
-        message.setSubject("验证你的面试记录账号");
-        message.setText("请在 24 小时内打开以下链接完成邮箱验证：\n"
-                + frontendBaseUrl + "/verify-email?token=" + URLEncoder.encode(rawToken, StandardCharsets.UTF_8));
-        sender.send(message);
+        sendActionEmail(email, "验证你的面试记录账号",
+                "账号验证", "验证你的邮箱",
+                "请在 24 小时内点击下方按钮完成邮箱验证，链接一次性有效。",
+                "完成邮箱验证",
+                frontendBaseUrl + "/verify-email?token=" + URLEncoder.encode(rawToken, StandardCharsets.UTF_8),
+                "如果你没有注册过面试记录账号，请忽略这封邮件。");
     }
 
     @Override
     public void sendPasswordResetEmail(String email, String rawToken) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(fromAddress);
-        message.setTo(email);
-        message.setSubject("重置你的面试记录账号密码");
-        message.setText("请在 1 小时内打开以下链接重置密码：\n"
-                + frontendBaseUrl + "/reset-password?token=" + URLEncoder.encode(rawToken, StandardCharsets.UTF_8));
-        sender.send(message);
+        sendActionEmail(email, "重置你的面试记录账号密码",
+                "账号安全", "重置密码",
+                "请在 1 小时内点击下方按钮设置新密码，链接一次性有效。",
+                "设置新密码",
+                frontendBaseUrl + "/reset-password?token=" + URLEncoder.encode(rawToken, StandardCharsets.UTF_8),
+                "如果你没有申请重置密码，请忽略这封邮件。");
+    }
+
+    /** 账号类操作邮件（验证/重置）共用同一套卡片模板。 */
+    private void sendActionEmail(String to, String subject, String kicker, String title,
+            String body, String buttonLabel, String rawLink, String footer) {
+        try {
+            MimeMessageHelper helper = new MimeMessageHelper(sender.createMimeMessage(), StandardCharsets.UTF_8.name());
+            helper.setFrom(fromAddress);
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(buildActionHtml(kicker, title, body, buttonLabel,
+                    HtmlUtils.htmlEscape(rawLink), footer), true);
+            sender.send(helper.getMimeMessage());
+        } catch (jakarta.mail.MessagingException exception) {
+            throw new IllegalStateException("Unable to build account email", exception);
+        }
+    }
+
+    private String buildActionHtml(String kicker, String title, String body, String buttonLabel,
+            String link, String footer) {
+        return """
+                <div style="background:#f6f7f6;padding:24px 12px;font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;color:#23262a;">
+                  <div style="max-width:480px;margin:0 auto;background:#ffffff;border:1px solid #e2e5e2;border-radius:12px;overflow:hidden;">
+                    <div style="padding:18px 24px 14px;border-bottom:1px solid #eef0ee;">
+                      <span style="font-size:12px;font-weight:700;letter-spacing:.06em;color:#d2403a;">面试记录 · %s</span>
+                      <div style="font-size:17px;font-weight:700;margin-top:8px;line-height:1.5;">%s</div>
+                      <div style="font-size:14px;color:#6b716c;margin-top:8px;line-height:1.7;">%s</div>
+                    </div>
+                    <div style="padding:16px 24px 20px;">
+                      <a href="%s" style="display:inline-block;background:#d2403a;color:#ffffff;text-decoration:none;padding:11px 24px;border-radius:8px;font-size:14px;font-weight:600;">%s</a>
+                    </div>
+                    <div style="padding:12px 24px;border-top:1px solid #eef0ee;color:#9aa09b;font-size:12px;">
+                      %s
+                    </div>
+                  </div>
+                </div>
+                """.formatted(kicker, title, body, link, buttonLabel, footer);
     }
 
     @Override
