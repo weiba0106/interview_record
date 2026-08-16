@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { ElButton, ElCheckbox, ElInput, ElOption, ElSelect } from 'element-plus'
+import RichTextEditor from '@/shared/components/RichTextEditor.vue'
 import { INTERVIEW_RESULTS, INTERVIEW_TYPES, type InterviewRound, type RoundRequest } from '../api/interviews.api'
 import { fromDatetimeInput, toDatetimeInput } from '@/shared/format/datetime'
 
@@ -111,11 +112,11 @@ function submit() {
     </ElSelect>
     <p v-if="fieldErrors.result" id="round-result-error" data-field-error="result" role="alert">{{ fieldErrors.result }}</p>
 
-    <label for="round-process-notes">面试过程记录（可选）</label>
-    <ElInput id="round-process-notes" v-model="form.processNotes" name="processNotes" type="textarea" :rows="4" maxlength="4000" />
+    <label for="round-process-notes">面试过程记录（可选，支持富文本）</label>
+    <RichTextEditor id="round-process-notes" :model-value="form.processNotes" placeholder="记录面试流程、提问节奏…" @update:model-value="form.processNotes = $event ?? ''" />
 
-    <label for="round-review">整体复盘（可选）</label>
-    <ElInput id="round-review" v-model="form.reviewSummary" name="reviewSummary" type="textarea" :rows="4" maxlength="4000" />
+    <label for="round-review">整体复盘（可选，支持富文本）</label>
+    <RichTextEditor id="round-review" :model-value="form.reviewSummary" placeholder="记录表现、反馈和改进项…" @update:model-value="form.reviewSummary = $event ?? ''" />
 
     <fieldset class="round-questions">
       <legend>面试问题与回答</legend>

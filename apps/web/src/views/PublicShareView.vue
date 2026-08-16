@@ -31,8 +31,8 @@ onMounted(async () => {
           <h2>第 {{ (round.content.basicInfo as { roundNumber?: number }).roundNumber ?? '' }} 轮 · {{ (round.content.basicInfo as { roundName?: string }).roundName ?? '面试' }}</h2>
           <p class="muted">{{ (round.content.basicInfo as { interviewType?: string }).interviewType }} · {{ (round.content.basicInfo as { startsAt?: string }).startsAt }}</p>
         </template>
-        <pre v-if="round.content.processNotes" class="text">{{ round.content.processNotes }}</pre>
-        <pre v-if="round.content.reviewSummary" class="text">{{ round.content.reviewSummary }}</pre>
+        <div v-if="round.content.processNotes" class="rich-content text" v-html="String(round.content.processNotes)" />
+        <div v-if="round.content.reviewSummary" class="rich-content text" v-html="String(round.content.reviewSummary)" />
         <p v-if="round.content.result" class="result">结果：{{ round.content.result }}</p>
         <div v-if="round.content.questions" class="questions">
           <h3>面试问题</h3>

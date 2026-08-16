@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { ElButton, ElCheckbox, ElInput, ElOption, ElSelect } from 'element-plus'
+import RichTextEditor from '@/shared/components/RichTextEditor.vue'
 import type { Company, JobType, Position, PositionRequest, PositionStatus } from '../api/tracking.types'
 import { fromDateInput, fromDatetimeInput, toDateInput, toDatetimeInput } from '@/shared/format/datetime'
 
@@ -121,8 +122,8 @@ function submit() {
     <label for="position-work-location">工作地点（可选）</label>
     <ElInput id="position-work-location" v-model="form.workLocation" name="workLocation" maxlength="120" />
 
-      <label for="position-description">岗位描述或备注（可选）</label>
-      <ElInput id="position-description" v-model="form.description" name="description" type="textarea" :rows="4" maxlength="4000" />
+      <label for="position-description">岗位描述或备注（可选，支持富文本）</label>
+      <RichTextEditor id="position-description" :model-value="form.description" placeholder="记录岗位要求、个人备注…" @update:model-value="form.description = $event ?? ''" />
 
       <ElButton native-type="submit" type="primary" data-action="submit-position">{{ submitLabel ?? '保存岗位' }}</ElButton>
     </div>

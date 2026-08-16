@@ -167,7 +167,7 @@ async function confirmDeletePosition() {
             <a v-if="position.applyUrl" :href="position.applyUrl" target="_blank" rel="noopener noreferrer">{{ position.applyUrl }}</a>
             <span v-else>—</span>
           </div>
-          <div class="info-item info-item-wide"><span class="info-label">岗位描述</span><p class="description-text">{{ position.description ?? '—' }}</p></div>
+          <div class="info-item info-item-wide"><span class="info-label">岗位描述</span><div class="rich-content description-text" v-html="position.description ?? '<p>—</p>'" /></div>
           <div v-if="position.nextSchedule" class="info-item info-item-wide">
             <span class="info-label">下一场日程</span>
             <span>{{ position.nextSchedule.title }} · {{ formatDateTime(position.nextSchedule.time) }}</span>
@@ -198,11 +198,12 @@ async function confirmDeletePosition() {
             <p class="round-result">结果：<ElTag :type="RESULT_TAG_TYPES[round.result] ?? 'info'" size="small">{{ interviewResultLabel(round.result) }}</ElTag></p>
             <template v-if="round.processNotes">
               <h4>过程记录</h4>
-              <p class="round-text">{{ round.processNotes }}</p>
+              <!-- 内容已经服务端白名单清洗，可安全渲染 -->
+              <div class="rich-content round-text" v-html="round.processNotes" />
             </template>
             <template v-if="round.reviewSummary">
               <h4>整体复盘</h4>
-              <p class="round-text">{{ round.reviewSummary }}</p>
+              <div class="rich-content round-text" v-html="round.reviewSummary" />
             </template>
             <template v-if="round.questions.length > 0">
               <h4>问题与回答（{{ round.questions.length }}）</h4>
@@ -273,7 +274,6 @@ async function confirmDeletePosition() {
 }
 .description-text {
   margin: 0;
-  white-space: pre-wrap;
 }
 .rounds-empty { margin: 0; padding: 14px 16px 16px; color: var(--ir-muted); font-size: 13px; }
 .round-list {
@@ -319,7 +319,6 @@ async function confirmDeletePosition() {
 }
 .round-text {
   margin: 0;
-  white-space: pre-wrap;
   font-size: 13.5px;
   line-height: 1.7;
 }

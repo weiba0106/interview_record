@@ -575,6 +575,25 @@ p[role="status"] {
 }
 .add-schedule-button:hover { border-color: var(--ir-primary-strong); background: var(--ir-primary-soft); }
 
+/* 富文本展示（内容已经服务端白名单清洗） */
+.rich-content p { margin: 0 0 8px; }
+.rich-content p:last-child { margin-bottom: 0; }
+.rich-content ul, .rich-content ol { margin: 0 0 8px; padding-left: 22px; }
+.rich-content a { color: var(--ir-primary-strong); }
+.rich-content h2, .rich-content h3 { font-size: 1.05em; margin: 10px 0 6px; }
+.rich-content pre {
+  background: var(--ir-surface-muted);
+  border-radius: var(--ir-radius-xs);
+  padding: 8px 10px;
+  overflow-x: auto;
+}
+.rich-content blockquote {
+  margin: 0 0 8px;
+  padding-left: 10px;
+  border-left: 3px solid var(--ir-border-strong);
+  color: var(--ir-muted);
+}
+
 /* ---------- 响应式 ---------- */
 @media (max-width: 860px) {
   .app-shell {
