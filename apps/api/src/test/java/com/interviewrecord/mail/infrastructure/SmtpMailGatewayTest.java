@@ -68,7 +68,8 @@ class SmtpMailGatewayTest {
                 "阿里巴巴 <b>公司</b>",
                 "后端开发工程师",
                 Instant.parse("2026-08-16T17:28:00Z"),
-                "Asia/Shanghai"));
+                "Asia/Shanghai",
+                java.time.Duration.ofMinutes(120)));
 
         ArgumentCaptor<MimeMessage> capture = ArgumentCaptor.forClass(MimeMessage.class);
         verify(sender).send(capture.capture());
@@ -81,6 +82,7 @@ class SmtpMailGatewayTest {
         assertThat(html).contains("Asia/Shanghai");
         assertThat(html).contains("http://localhost:5173/app/schedules");
         assertThat(html).contains("查看详情");
+        assertThat(html).contains("本提醒提前 2 小时 发送");
         // 用户内容已 HTML 转义，脚本与标签不会原样进入邮件
         assertThat(html).doesNotContain("<script>");
         assertThat(html).contains("&lt;script&gt;alert(1)&lt;/script&gt;");
@@ -98,7 +100,8 @@ class SmtpMailGatewayTest {
 
         SmtpMailGateway gateway = new SmtpMailGateway(sender, "http://localhost:5173", "reminder@example.com");
         gateway.sendScheduleReminder("candidate@example.com", new ScheduleReminderMail(
-                "笔试", null, null, Instant.parse("2026-08-16T17:28:00Z"), null));
+                "笔试", null, null, Instant.parse("2026-08-16T17:28:00Z"), null,
+                java.time.Duration.ofMinutes(1440)));
 
         ArgumentCaptor<MimeMessage> capture = ArgumentCaptor.forClass(MimeMessage.class);
         verify(sender).send(capture.capture());

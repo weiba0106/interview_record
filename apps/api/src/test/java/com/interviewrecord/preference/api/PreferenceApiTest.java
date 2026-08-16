@@ -48,7 +48,7 @@ class PreferenceApiTest {
         AuthenticatedUser alice = new AuthenticatedUser(42L, "alice@example.com", "Old display name", true,
                 "Asia/Shanghai", Theme.GRAPHITE_CORAL);
         given(preferenceService.get(42L)).willReturn(new PreferenceDtos.PreferenceResponse(
-                "Alice Tokyo", "Asia/Tokyo", Theme.FOREST_TEAL, java.util.List.of(60), java.util.List.of(10)));
+                "Alice Tokyo", "Asia/Tokyo", Theme.FOREST_TEAL, false, java.util.List.of(60), java.util.List.of(10)));
 
         mvc.perform(get("/api/v1/me").with(authentication(authenticationFor(alice))))
                 .andExpect(status().isOk())
@@ -63,7 +63,7 @@ class PreferenceApiTest {
         AuthenticatedUser alice = new AuthenticatedUser(42L, "alice@example.com", "Alice", true,
                 "Asia/Shanghai", Theme.GRAPHITE_CORAL);
         given(preferenceService.get(42L)).willReturn(new PreferenceDtos.PreferenceResponse(
-                "Alice Tokyo", "Asia/Tokyo", Theme.FOREST_TEAL, java.util.List.of(60, 5), java.util.List.of(10)));
+                "Alice Tokyo", "Asia/Tokyo", Theme.FOREST_TEAL, false, java.util.List.of(60, 5), java.util.List.of(10)));
 
         mvc.perform(get("/api/v1/me/preferences").with(authentication(authenticationFor(alice))))
                 .andExpect(status().isOk())
@@ -80,7 +80,7 @@ class PreferenceApiTest {
                 "Asia/Shanghai", Theme.GRAPHITE_CORAL);
 
         given(preferenceService.update(eq(42L), any())).willReturn(new PreferenceDtos.PreferenceResponse(
-                "Alice Tokyo", "Asia/Tokyo", Theme.FOREST_TEAL, java.util.List.of(1440, 30), java.util.List.of(60)));
+                "Alice Tokyo", "Asia/Tokyo", Theme.FOREST_TEAL, true, java.util.List.of(1440, 30), java.util.List.of(60)));
 
         mvc.perform(patch("/api/v1/me/preferences").with(authentication(authenticationFor(alice))).with(csrf())
                         .contentType(APPLICATION_JSON)
@@ -143,3 +143,4 @@ class PreferenceApiTest {
         return UsernamePasswordAuthenticationToken.authenticated(user, null, user.authorities());
     }
 }
+

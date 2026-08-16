@@ -26,7 +26,8 @@ public class PreferenceService {
     @Transactional(readOnly = true)
     public PreferenceDtos.PreferenceResponse get(long userId) {
         UserPreference preference = preferences.requireByUserId(userId);
-        return new PreferenceDtos.PreferenceResponse(preference.user().displayName(), preference.timeZone(), preference.theme(),
+        return new PreferenceDtos.PreferenceResponse(preference.user().displayName(), preference.timeZone(),
+                preference.theme(), preference.darkMode(),
                 preference.interviewReminderOffsets(), preference.deadlineReminderOffsets());
     }
 
@@ -37,9 +38,10 @@ public class PreferenceService {
         List<Integer> interviewOffsets = normalizeOffsets(request.interviewReminderOffsets());
         List<Integer> deadlineOffsets = normalizeOffsets(request.deadlineReminderOffsets());
         preference.user().changeDisplayName(request.displayName().trim(), clock.instant());
-        preference.update(request.timeZone(), request.theme(), interviewOffsets, deadlineOffsets, clock.instant());
-        return new PreferenceDtos.PreferenceResponse(preference.user().displayName(), preference.timeZone(), preference.theme(),
-                interviewOffsets, deadlineOffsets);
+        preference.update(request.timeZone(), request.theme(), request.darkMode(), interviewOffsets,
+                deadlineOffsets, clock.instant());
+        return new PreferenceDtos.PreferenceResponse(preference.user().displayName(), preference.timeZone(),
+                preference.theme(), preference.darkMode(), interviewOffsets, deadlineOffsets);
     }
 
     private void validateTimeZone(String value) {

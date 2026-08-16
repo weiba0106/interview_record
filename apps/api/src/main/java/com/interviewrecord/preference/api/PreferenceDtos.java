@@ -16,11 +16,12 @@ public final class PreferenceDtos {
             @NotBlank @Size(max = 80) String displayName,
             @NotBlank @Size(max = 64) String timeZone,
             @NotNull Theme theme,
+            Boolean darkMode,
             @NotNull List<@NotNull @Min(0) @Max(10080) Integer> interviewReminderOffsets,
             @NotNull List<@NotNull @Min(0) @Max(10080) Integer> deadlineReminderOffsets) {
     }
 
-    public record PreferenceResponse(String displayName, String timeZone, Theme theme,
+    public record PreferenceResponse(String displayName, String timeZone, Theme theme, boolean darkMode,
             List<Integer> interviewReminderOffsets, List<Integer> deadlineReminderOffsets) {
     }
 }

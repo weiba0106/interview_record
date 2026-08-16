@@ -110,12 +110,14 @@ public class SmtpMailGateway implements MailGateway {
         String position = HtmlUtils.htmlEscape(nullable(mail.positionTitle()));
         String link = frontendBaseUrl + "/app/schedules";
         String zoneText = zoneLabel(zone);
+        String leadText = leadText(mail.leadTime());
         return """
                 <div style="background:#f6f7f6;padding:24px 12px;font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;color:#23262a;">
                   <div style="max-width:480px;margin:0 auto;background:#ffffff;border:1px solid #e2e5e2;border-radius:12px;overflow:hidden;">
                     <div style="padding:18px 24px 14px;border-bottom:1px solid #eef0ee;">
                       <span style="font-size:12px;font-weight:700;letter-spacing:.06em;color:#d2403a;">面试记录 · 日程提醒</span>
                       <div style="font-size:17px;font-weight:700;margin-top:8px;line-height:1.5;">%s</div>
+                      <div style="font-size:13px;color:#6b716c;margin-top:6px;">本提醒提前 %s 发送</div>
                     </div>
                     <table style="width:100%%;border-collapse:collapse;font-size:14px;line-height:1.9;margin:6px 0;">
                       <tr><td style="color:#6b716c;width:86px;padding:3px 24px;">公司</td><td style="padding:3px 24px 3px 0;">%s</td></tr>
@@ -130,7 +132,7 @@ public class SmtpMailGateway implements MailGateway {
                     </div>
                   </div>
                 </div>
-                """.formatted(title, company, position, time, zoneText, link);
+                """.formatted(title, leadText, company, position, time, zoneText, link);
     }
 
     /** 主题里的用户内容去掉换行，防止邮件头注入。 */
@@ -150,6 +152,20 @@ public class SmtpMailGateway implements MailGateway {
     /** ZoneOffset.UTC.getId() 是 "Z"，邮件里显示为更友好的 "UTC"。 */
     private String zoneLabel(ZoneId zone) {
         return ZoneOffset.UTC.equals(zone) ? "UTC" : zone.getId();
+    }
+
+    /** 提醒提前量：1440→"24 小时"，120→"2 小时"，45→"45 分钟"，1500→"1 天 1 小时"。 */
+    private String leadText(java.time.Duration lead) {
+        if (lead == null || lead.isNegative() || lead.isZero()) return "准时";
+        long totalMinutes = lead.toMinutes();
+        long days = totalMinutes / 1440;
+        long hours = (totalMinutes % 1440) / 60;
+        long minutes = totalMinutes % 60;
+        StringBuilder text = new StringBuilder();
+        if (days > 0) text.append(days).append(" 天");
+        if (hours > 0) text.append(text.isEmpty() ? "" : " ").append(hours).append(" 小时");
+        if (minutes > 0) text.append(text.isEmpty() ? "" : " ").append(minutes).append(" 分钟");
+        return text.toString();
     }
 
     private String nullable(String value) {

@@ -158,6 +158,8 @@ class ReminderServiceTest {
         assertThat(capture.getValue().positionTitle()).isEqualTo("后端开发工程师");
         assertThat(capture.getValue().timeZone()).isEqualTo("UTC");
         assertThat(capture.getValue().title()).isEqualTo("Interview");
+        // 提醒安排在事件前 60 分钟（NOW → NOW+1h）
+        assertThat(capture.getValue().leadTime()).isEqualTo(java.time.Duration.ofHours(1));
     }
 
     @Test

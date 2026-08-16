@@ -95,7 +95,7 @@ public class ReminderService {
             return;
         }
         try {
-            mail.sendScheduleReminder(preference.user().email(), buildMail(reminder.userId(), schedule, preference));
+            mail.sendScheduleReminder(preference.user().email(), buildMail(reminder, schedule, preference));
             reminder.markSent(now);
         } catch (RuntimeException exception) {
             reminder.markDeliveryFailure(now);
@@ -117,7 +117,8 @@ public class ReminderService {
         return states;
     }
 
-    private ScheduleReminderMail buildMail(Long userId, ScheduleEvent schedule, UserPreference preference) {
+    private ScheduleReminderMail buildMail(Reminder reminder, ScheduleEvent schedule, UserPreference preference) {
+        Long userId = reminder.userId();
         String companyName = null;
         String positionTitle = null;
         if (schedule.positionId() != null) {
@@ -128,8 +129,11 @@ public class ReminderService {
                 if (company != null) companyName = company.name();
             }
         }
+        java.time.Duration leadTime = schedule.referenceTime() == null
+                ? java.time.Duration.ZERO
+                : java.time.Duration.between(reminder.scheduledAt(), schedule.referenceTime());
         return new ScheduleReminderMail(schedule.title(), companyName, positionTitle,
-                schedule.referenceTime(), preference.timeZone());
+                schedule.referenceTime(), preference.timeZone(), leadTime);
     }
 
     private String idempotencyKey(Long scheduleId, int offset, Instant eventTime) {

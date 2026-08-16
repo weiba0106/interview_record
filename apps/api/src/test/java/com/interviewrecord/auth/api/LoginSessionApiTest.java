@@ -59,7 +59,8 @@ class LoginSessionApiTest {
     void verifiedUserLogsInAndSessionCanReadCurrentUser() throws Exception {
         given(authService.login(any(), any(), any())).willReturn(VERIFIED_USER);
         given(preferenceService.get(42L)).willReturn(new PreferenceDtos.PreferenceResponse(
-                VERIFIED_USER.displayName(), VERIFIED_USER.timeZone(), VERIFIED_USER.theme(), java.util.List.of(), java.util.List.of()));
+                VERIFIED_USER.displayName(), VERIFIED_USER.timeZone(), VERIFIED_USER.theme(), false,
+                java.util.List.of(), java.util.List.of()));
 
         MvcResult login = mvc.perform(post("/api/v1/auth/login").with(csrf()).contentType(APPLICATION_JSON)
                         .content("{\"email\":\"user@example.com\",\"password\":\"Password123\"}"))
@@ -151,7 +152,8 @@ class LoginSessionApiTest {
         AuthenticatedUser otherUser = new AuthenticatedUser(
                 84L, "other@example.com", "小周", true, "UTC", Theme.FOREST_TEAL);
         given(preferenceService.get(84L)).willReturn(new PreferenceDtos.PreferenceResponse(
-                otherUser.displayName(), otherUser.timeZone(), otherUser.theme(), java.util.List.of(), java.util.List.of()));
+                otherUser.displayName(), otherUser.timeZone(), otherUser.theme(), false,
+                java.util.List.of(), java.util.List.of()));
 
         mvc.perform(get("/api/v1/me").with(authentication(authenticationFor(otherUser))))
                 .andExpect(status().isOk())

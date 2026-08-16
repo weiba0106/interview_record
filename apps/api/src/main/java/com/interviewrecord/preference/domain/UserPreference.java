@@ -21,6 +21,7 @@ public class UserPreference {
     @OneToOne(optional = false) @MapsId @JoinColumn(name = "user_id") private User user;
     @Column(name = "time_zone", nullable = false) private String timeZone;
     @Enumerated(EnumType.STRING) @Column(nullable = false) private Theme theme;
+    @Column(name = "dark_mode", nullable = false) private boolean darkMode;
     @Column(name = "interview_reminder_offsets", nullable = false, columnDefinition = "json") private String interviewReminderOffsets;
     @Column(name = "deadline_reminder_offsets", nullable = false, columnDefinition = "json") private String deadlineReminderOffsets;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
@@ -34,12 +35,16 @@ public class UserPreference {
     }
     public String timeZone() { return timeZone; }
     public Theme theme() { return theme; }
+    public boolean darkMode() { return darkMode; }
     public User user() { return user; }
     public List<Integer> interviewReminderOffsets() { return offsetsFromJson(interviewReminderOffsets); }
     public List<Integer> deadlineReminderOffsets() { return offsetsFromJson(deadlineReminderOffsets); }
-    public void update(String timeZone, Theme theme, List<Integer> interviewOffsets, List<Integer> deadlineOffsets, Instant now) {
+    public void update(String timeZone, Theme theme, Boolean darkMode, List<Integer> interviewOffsets,
+            List<Integer> deadlineOffsets, Instant now) {
         this.timeZone = timeZone;
         this.theme = theme;
+        // null 表示请求未携带该字段，保持现有设置
+        if (darkMode != null) this.darkMode = darkMode;
         this.interviewReminderOffsets = offsetsToJson(interviewOffsets);
         this.deadlineReminderOffsets = offsetsToJson(deadlineOffsets);
         this.updatedAt = now;
