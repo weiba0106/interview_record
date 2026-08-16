@@ -1,9 +1,13 @@
 package com.interviewrecord.mail.infrastructure;
 
 import com.interviewrecord.mail.application.MailGateway;
+import com.interviewrecord.mail.application.ScheduleReminderMail;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
+import java.time.DateTimeException;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import org.springframework.context.annotation.Profile;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
@@ -41,13 +45,31 @@ public class SmtpMailGateway implements MailGateway {
         sender.send(message);
     }
     @Override
-    public void sendScheduleReminder(String email, String scheduleTitle, Instant scheduledFor) {
+    public void sendScheduleReminder(String email, ScheduleReminderMail mail) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(fromAddress);
         message.setTo(email);
-        message.setSubject("面试记录日程提醒：" + scheduleTitle);
-        message.setText("日程：" + scheduleTitle + "\n时间（UTC）：" + scheduledFor
+        message.setSubject("面试记录日程提醒：" + mail.title());
+        ZoneId zone = userZone(mail.timeZone());
+        String time = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(zone).format(mail.scheduledFor());
+        message.setText("日程：" + mail.title()
+                + "\n公司：" + nullable(mail.companyName())
+                + "\n岗位：" + nullable(mail.positionTitle())
+                + "\n时间（" + zone.getId() + "）：" + time
                 + "\n\n查看详情：" + frontendBaseUrl + "/app/schedules");
         sender.send(message);
+    }
+
+    private ZoneId userZone(String timeZone) {
+        if (timeZone == null || timeZone.isBlank()) return ZoneOffset.UTC;
+        try {
+            return ZoneId.of(timeZone);
+        } catch (DateTimeException invalid) {
+            return ZoneOffset.UTC;
+        }
+    }
+
+    private String nullable(String value) {
+        return value == null || value.isBlank() ? "—" : value;
     }
 }

@@ -1,15 +1,25 @@
 package com.interviewrecord.reminders.application;
 
 import com.interviewrecord.mail.application.MailGateway;
+import com.interviewrecord.mail.application.ScheduleReminderMail;
 import com.interviewrecord.preference.domain.UserPreference;
 import com.interviewrecord.preference.infrastructure.JpaUserPreferenceRepository;
 import com.interviewrecord.reminders.domain.Reminder;
+import com.interviewrecord.reminders.domain.ReminderState;
 import com.interviewrecord.reminders.infrastructure.JpaReminderRepository;
 import com.interviewrecord.scheduling.domain.ScheduleEvent;
 import com.interviewrecord.scheduling.infrastructure.JpaScheduleEventRepository;
+import com.interviewrecord.tracking.domain.Company;
+import com.interviewrecord.tracking.domain.Position;
+import com.interviewrecord.tracking.infrastructure.JpaCompanyRepository;
+import com.interviewrecord.tracking.infrastructure.JpaPositionRepository;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -19,16 +29,21 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @ConditionalOnExpression("'${spring.datasource.url:}' != ''")
 public class ReminderService {
+    private static final int MAX_STATES_PER_SCHEDULE = 10;
+
     private final JpaReminderRepository reminders;
     private final JpaUserPreferenceRepository preferences;
     private final JpaScheduleEventRepository schedules;
+    private final JpaPositionRepository positions;
+    private final JpaCompanyRepository companies;
     private final MailGateway mail;
     private final Clock clock;
 
     public ReminderService(JpaReminderRepository reminders, JpaUserPreferenceRepository preferences,
-            JpaScheduleEventRepository schedules, MailGateway mail, Clock clock) {
+            JpaScheduleEventRepository schedules, JpaPositionRepository positions,
+            JpaCompanyRepository companies, MailGateway mail, Clock clock) {
         this.reminders = reminders; this.preferences = preferences; this.schedules = schedules;
-        this.mail = mail; this.clock = clock;
+        this.positions = positions; this.companies = companies; this.mail = mail; this.clock = clock;
     }
 
     @Transactional
@@ -38,8 +53,7 @@ public class ReminderService {
         if (!event.pending() || event.referenceTime() == null) return;
         UserPreference preference = preferences.requireByUserId(userId);
         if (!preference.user().isVerified()) return;
-        for (Integer offset : ReminderPlan.defaultOffsets(event.eventType(),
-                preference.interviewReminderOffsets(), preference.deadlineReminderOffsets())) {
+        for (Integer offset : ReminderPlan.effectiveOffsets(event, preference)) {
             Instant scheduledAt = ReminderPlan.scheduledAt(event.referenceTime(), offset);
             String key = idempotencyKey(event.id(), offset, event.referenceTime());
             if (!reminders.existsByIdempotencyKey(key)) {
@@ -81,11 +95,41 @@ public class ReminderService {
             return;
         }
         try {
-            mail.sendScheduleReminder(preference.user().email(), schedule.title(), schedule.referenceTime());
+            mail.sendScheduleReminder(preference.user().email(), buildMail(reminder.userId(), schedule, preference));
             reminder.markSent(now);
         } catch (RuntimeException exception) {
             reminder.markDeliveryFailure(now);
         }
+    }
+
+    /** 供日程响应展示的发送状态（含最终失败），按 scheduleId 分组。 */
+    @Transactional(readOnly = true)
+    public Map<Long, List<ReminderState>> statesBySchedule(Long userId, Set<Long> scheduleIds) {
+        if (scheduleIds.isEmpty()) return Map.of();
+        Map<Long, List<ReminderState>> states = new HashMap<>();
+        for (Reminder reminder : reminders.findAllByUserIdAndScheduleIdInOrderByScheduledAtDesc(userId, scheduleIds)) {
+            states.computeIfAbsent(reminder.scheduleId(), key -> new ArrayList<>())
+                    .add(new ReminderState(reminder.scheduledAt(), reminder.status(), reminder.sentAt()));
+        }
+        states.replaceAll((key, list) -> list.size() > MAX_STATES_PER_SCHEDULE
+                ? new ArrayList<>(list.subList(0, MAX_STATES_PER_SCHEDULE))
+                : list);
+        return states;
+    }
+
+    private ScheduleReminderMail buildMail(Long userId, ScheduleEvent schedule, UserPreference preference) {
+        String companyName = null;
+        String positionTitle = null;
+        if (schedule.positionId() != null) {
+            Position position = positions.findByIdAndUserId(schedule.positionId(), userId).orElse(null);
+            if (position != null) {
+                positionTitle = position.title();
+                Company company = companies.findByIdAndUserId(position.companyId(), userId).orElse(null);
+                if (company != null) companyName = company.name();
+            }
+        }
+        return new ScheduleReminderMail(schedule.title(), companyName, positionTitle,
+                schedule.referenceTime(), preference.timeZone());
     }
 
     private String idempotencyKey(Long scheduleId, int offset, Instant eventTime) {

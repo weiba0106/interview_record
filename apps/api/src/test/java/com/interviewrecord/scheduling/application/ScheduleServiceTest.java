@@ -41,7 +41,7 @@ class ScheduleServiceTest {
         given(schedules.findAllByUserIdAndInterviewRoundId(1L, 9L)).willReturn(List.of(edited, sibling));
 
         service.update(1L, 11L, new ScheduleRequest("技术一面", "INTERVIEW", NEW_START,
-                NEW_START.plusSeconds(3600), "5", "9", "会议链接", null, 0L));
+                NEW_START.plusSeconds(3600), "5", "9", "会议链接", null, null, 0L));
 
         assertThat(round.startsAt()).isEqualTo(NEW_START);
         assertThat(round.endsAt()).isEqualTo(NEW_START.plusSeconds(3600));
@@ -75,7 +75,7 @@ class ScheduleServiceTest {
         given(schedules.findByIdAndUserId(11L, 1L)).willReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> service.update(1L, 11L, new ScheduleRequest("改期", "CUSTOM", NEW_START,
-                null, null, null, null, null, 99L)))
+                null, null, null, null, null, null, 99L)))
                 .isInstanceOf(ConflictException.class)
                 .hasMessage("日程已被更新，请刷新后重试");
         assertThat(existing.startsAt()).isEqualTo(NOW.plusSeconds(3600));

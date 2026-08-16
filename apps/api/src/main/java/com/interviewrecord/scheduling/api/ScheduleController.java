@@ -66,6 +66,14 @@ public class ScheduleController {
                 request.urgency());
     }
 
+    /** 单条日程提醒配置：null 恢复默认规则、空数组关闭、非空为自定义提醒时间。 */
+    @PutMapping("/{id}/reminders")
+    ScheduleDtos.ScheduleResponse updateReminders(@PathVariable String id,
+            @Valid @RequestBody ScheduleDtos.ReminderUpdateRequest request) {
+        return scheduleService.updateReminders(currentUser.require().id(), ResourceIds.parse(id),
+                request.offsets());
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void delete(@PathVariable String id) {

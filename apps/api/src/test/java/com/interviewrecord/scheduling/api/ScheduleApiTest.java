@@ -9,6 +9,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -22,6 +23,7 @@ import com.interviewrecord.common.security.JsonAuthenticationEntryPoint;
 import com.interviewrecord.preference.domain.Theme;
 import com.interviewrecord.scheduling.application.ScheduleService;
 import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
@@ -58,7 +60,7 @@ class ScheduleApiTest {
         Instant startsAt = Instant.parse("2026-08-13T02:00:00Z");
         given(scheduleService.create(eq(42L), any())).willReturn(new ScheduleDtos.ScheduleResponse(
                 "11", "笔试", "WRITTEN_TEST", startsAt, null, null, null, null, null, null,
-                "PENDING", "URGENT", false, null, startsAt, 0L, startsAt));
+                "PENDING", "URGENT", false, null, startsAt, 0L, startsAt, null, List.of()));
 
         mvc.perform(post("/api/v1/schedules").with(authentication(authenticationFor(ALICE))).with(csrf())
                         .contentType(APPLICATION_JSON)
@@ -86,7 +88,7 @@ class ScheduleApiTest {
         Instant startsAt = Instant.parse("2026-09-01T02:00:00Z");
         given(scheduleService.overrideUrgency(42L, 11L, "URGENT")).willReturn(new ScheduleDtos.ScheduleResponse(
                 "11", "笔试", "WRITTEN_TEST", startsAt, null, null, null, null, null, null,
-                "PENDING", "URGENT", false, "URGENT", startsAt, 1L, startsAt));
+                "PENDING", "URGENT", false, "URGENT", startsAt, 1L, startsAt, null, List.of()));
 
         mvc.perform(patch("/api/v1/schedules/11/urgency").with(authentication(authenticationFor(ALICE))).with(csrf())
                         .contentType(APPLICATION_JSON)
@@ -94,6 +96,43 @@ class ScheduleApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.manualUrgency").value("URGENT"))
                 .andExpect(jsonPath("$.urgency").value("URGENT"));
+    }
+
+    @Test
+    void reminderOverrideIsForwardedForTheAuthenticatedUser() throws Exception {
+        Instant startsAt = Instant.parse("2026-09-01T02:00:00Z");
+        given(scheduleService.updateReminders(42L, 11L, List.of(1440, 30)))
+                .willReturn(new ScheduleDtos.ScheduleResponse(
+                        "11", "笔试", "WRITTEN_TEST", startsAt, null, null, null, null, null, null,
+                        "PENDING", "NORMAL", false, null, startsAt, 1L, startsAt, List.of(1440, 30), List.of()));
+
+        mvc.perform(put("/api/v1/schedules/11/reminders").with(authentication(authenticationFor(ALICE))).with(csrf())
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"offsets\":[1440,30]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reminderOffsets[0]").value(1440))
+                .andExpect(jsonPath("$.reminderOffsets[1]").value(30));
+    }
+
+    @Test
+    void reminderOverrideRequiresAuthentication() throws Exception {
+        mvc.perform(put("/api/v1/schedules/11/reminders").with(csrf())
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"offsets\":[1440]}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+    }
+
+    @Test
+    void reminderOverrideRejectsTooManyOffsets() throws Exception {
+        given(scheduleService.updateReminders(eq(42L), eq(11L), any()))
+                .willThrow(new InvalidInputException("INVALID_REMINDER_OFFSETS", "单条日程最多设置 5 个提醒时间"));
+
+        mvc.perform(put("/api/v1/schedules/11/reminders").with(authentication(authenticationFor(ALICE))).with(csrf())
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"offsets\":[1440,720,360,180,60,30]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REMINDER_OFFSETS"));
     }
 
     @Test

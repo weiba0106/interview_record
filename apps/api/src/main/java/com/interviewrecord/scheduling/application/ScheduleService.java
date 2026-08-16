@@ -11,7 +11,9 @@ import com.interviewrecord.scheduling.api.ScheduleDtos.ScheduleResponse;
 import com.interviewrecord.scheduling.domain.ScheduleEvent;
 import com.interviewrecord.scheduling.domain.Urgency;
 import com.interviewrecord.scheduling.infrastructure.JpaScheduleEventRepository;
+import com.interviewrecord.reminders.application.ReminderPlan;
 import com.interviewrecord.reminders.application.ReminderService;
+import com.interviewrecord.reminders.domain.ReminderState;
 import com.interviewrecord.tracking.domain.Position;
 import com.interviewrecord.tracking.infrastructure.JpaPositionRepository;
 import java.time.Clock;
@@ -65,15 +67,17 @@ public class ScheduleService {
         Comparator<ScheduleEvent> pendingFirst = Comparator
                 .comparing((ScheduleEvent event) -> event.pending() ? 0 : 1)
                 .thenComparing(event -> event.referenceTime() == null ? Instant.MAX : event.referenceTime());
-        return events.stream().sorted(pendingFirst).limit(LIST_LIMIT)
-                .map(event -> toResponse(event, now, positionTitles(userId, events)))
-                .toList();
+        List<ScheduleEvent> sorted = events.stream().sorted(pendingFirst).limit(LIST_LIMIT).toList();
+        Map<Long, String> titles = positionTitles(userId, sorted);
+        Map<Long, List<ReminderState>> states = reminderStates(userId, sorted);
+        return sorted.stream().map(event -> toResponse(event, now, titles, states)).toList();
     }
 
     @Transactional(readOnly = true)
     public ScheduleResponse get(Long userId, Long scheduleId) {
         ScheduleEvent event = requireOwned(userId, scheduleId);
-        return toResponse(event, clock.instant(), positionTitles(userId, List.of(event)));
+        return toResponse(event, clock.instant(), positionTitles(userId, List.of(event)),
+                reminderStates(userId, List.of(event)));
     }
 
     @Transactional
@@ -81,7 +85,8 @@ public class ScheduleService {
         ScheduleEvent event = buildFromRequest(userId, request);
         ScheduleEvent saved = schedules.save(event);
         synchronizeReminders(userId, saved);
-        return toResponse(saved, clock.instant(), positionTitles(userId, List.of(saved)));
+        return toResponse(saved, clock.instant(), positionTitles(userId, List.of(saved)),
+                reminderStates(userId, List.of(saved)));
     }
 
     /** Internal creation path reused by position deadlines and interview rounds. */
@@ -117,11 +122,17 @@ public class ScheduleService {
         event.update(request.title().trim(), request.eventType(), request.startsAt(), request.endsAt(),
                 links.positionId(), links.roundId(), blankToNull(request.location()),
                 blankToNull(request.notes()), clock.instant());
+        // 缺省（null）表示保持现有提醒配置不变；显式传空数组表示关闭提醒。
+        if (request.reminderOffsets() != null) {
+            requireValidReminderOffsets(request.reminderOffsets());
+            event.overrideReminders(ReminderPlan.canonical(request.reminderOffsets()), clock.instant());
+        }
         if (event.interviewRoundId() != null) {
             syncRoundFromSchedule(userId, event);
         }
         synchronizeReminders(userId, event);
-        return toResponse(event, clock.instant(), positionTitles(userId, List.of(event)));
+        return toResponse(event, clock.instant(), positionTitles(userId, List.of(event)),
+                reminderStates(userId, List.of(event)));
     }
 
     @Transactional
@@ -130,7 +141,8 @@ public class ScheduleService {
         ScheduleEvent event = requireOwned(userId, scheduleId);
         event.changeStatus(status, clock.instant());
         synchronizeReminders(userId, event);
-        return toResponse(event, clock.instant(), positionTitles(userId, List.of(event)));
+        return toResponse(event, clock.instant(), positionTitles(userId, List.of(event)),
+                reminderStates(userId, List.of(event)));
     }
 
     /** Pass a null urgency to clear the manual override and restore automation. */
@@ -144,7 +156,19 @@ public class ScheduleService {
             throw new InvalidInputException("SCHEDULE_NOT_PENDING", "只能为待处理日程设置紧急程度");
         }
         event.overrideUrgency(urgency, clock.instant());
-        return toResponse(event, clock.instant(), positionTitles(userId, List.of(event)));
+        return toResponse(event, clock.instant(), positionTitles(userId, List.of(event)),
+                reminderStates(userId, List.of(event)));
+    }
+
+    /** 单条日程提醒配置：null 恢复默认规则、空列表关闭、非空为自定义提醒时间。 */
+    @Transactional
+    public ScheduleResponse updateReminders(Long userId, Long scheduleId, List<Integer> offsets) {
+        requireValidReminderOffsets(offsets);
+        ScheduleEvent event = requireOwned(userId, scheduleId);
+        event.overrideReminders(ReminderPlan.canonical(offsets), clock.instant());
+        synchronizeReminders(userId, event);
+        return toResponse(event, clock.instant(), positionTitles(userId, List.of(event)),
+                reminderStates(userId, List.of(event)));
     }
 
     @Transactional
@@ -200,7 +224,8 @@ public class ScheduleService {
                 .limit(limit)
                 .toList();
         Map<Long, String> titles = positionTitles(userId, candidates);
-        return candidates.stream().map(event -> toResponse(event, now, titles)).toList();
+        Map<Long, List<ReminderState>> states = reminderStates(userId, candidates);
+        return candidates.stream().map(event -> toResponse(event, now, titles, states)).toList();
     }
 
     @Transactional(readOnly = true)
@@ -215,9 +240,15 @@ public class ScheduleService {
         requireEventType(request.eventType());
         requireTimes(request.startsAt(), request.endsAt());
         ResolvedLinks links = resolveLinks(userId, request.positionId(), request.interviewRoundId());
-        return new ScheduleEvent(userId, request.title().trim(), request.eventType(), request.startsAt(),
+        ScheduleEvent event = new ScheduleEvent(userId, request.title().trim(), request.eventType(), request.startsAt(),
                 request.endsAt(), links.positionId(), links.roundId(), blankToNull(request.location()),
                 blankToNull(request.notes()), clock.instant());
+        // 创建时 null/缺省=默认规则，空数组=关闭提醒，非空=自定义。
+        if (request.reminderOffsets() != null) {
+            requireValidReminderOffsets(request.reminderOffsets());
+            event.overrideReminders(ReminderPlan.canonical(request.reminderOffsets()), clock.instant());
+        }
+        return event;
     }
 
     private record ResolvedLinks(Long positionId, Long roundId) {}
@@ -267,6 +298,19 @@ public class ScheduleService {
         }
     }
 
+    private void requireValidReminderOffsets(List<Integer> offsets) {
+        if (offsets == null) return;
+        if (offsets.size() > ReminderPlan.MAX_CUSTOM_OFFSETS) {
+            throw new InvalidInputException("INVALID_REMINDER_OFFSETS", "单条日程最多设置 5 个提醒时间");
+        }
+        if (offsets.stream().anyMatch(offset -> offset < 0 || offset > ReminderPlan.MAX_OFFSET_MINUTES)) {
+            throw new InvalidInputException("INVALID_REMINDER_OFFSETS", "提醒时间必须是 0 到 10080 之间的整数分钟");
+        }
+        if (new java.util.HashSet<>(offsets).size() != offsets.size()) {
+            throw new InvalidInputException("INVALID_REMINDER_OFFSETS", "提醒时间不能重复");
+        }
+    }
+
     private String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
     }
@@ -277,6 +321,12 @@ public class ScheduleService {
 
     private void cancelReminders(Long userId, Long scheduleId) {
         if (reminders != null) reminders.cancel(userId, scheduleId);
+    }
+
+    private Map<Long, List<ReminderState>> reminderStates(Long userId, List<ScheduleEvent> events) {
+        if (reminders == null) return Map.of();
+        return reminders.statesBySchedule(userId, events.stream().map(ScheduleEvent::id)
+                .collect(java.util.stream.Collectors.toSet()));
     }
 
     private Map<Long, String> positionTitles(Long userId, List<ScheduleEvent> events) {
@@ -291,7 +341,8 @@ public class ScheduleService {
         return titles;
     }
 
-    private ScheduleResponse toResponse(ScheduleEvent event, Instant now, Map<Long, String> titles) {
+    private ScheduleResponse toResponse(ScheduleEvent event, Instant now, Map<Long, String> titles,
+            Map<Long, List<ReminderState>> states) {
         Urgency urgency = event.urgency(now);
         boolean overdue = event.pending() && event.referenceTime() != null && event.referenceTime().isBefore(now);
         return new ScheduleResponse(Long.toString(event.id()), event.title(), event.eventType(),
@@ -300,6 +351,8 @@ public class ScheduleService {
                 event.positionId() == null ? null : titles.getOrDefault(event.positionId(), ""),
                 event.interviewRoundId() == null ? null : Long.toString(event.interviewRoundId()),
                 event.location(), event.notes(), event.status(), urgency.name(), overdue,
-                event.manualUrgency(), event.referenceTime(), event.version(), event.updatedAt());
+                event.manualUrgency(), event.referenceTime(), event.version(), event.updatedAt(),
+                event.reminderOffsets() == null ? null : ReminderPlan.parse(event.reminderOffsets()),
+                states.getOrDefault(event.id(), List.of()));
     }
 }

@@ -1,9 +1,9 @@
 package com.interviewrecord.support;
 
 import com.interviewrecord.mail.application.MailGateway;
+import com.interviewrecord.mail.application.ScheduleReminderMail;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.time.Instant;
 import org.springframework.mail.MailSendException;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -31,7 +31,7 @@ public final class FakeMailGateway implements MailGateway {
     public List<PasswordResetMessage> passwordResetMessages() { return List.copyOf(passwordResetMessages); }
 
     @Override
-    public void sendScheduleReminder(String email, String scheduleTitle, Instant scheduledFor) {
+    public void sendScheduleReminder(String email, ScheduleReminderMail mail) {
         if (failVerificationDelivery) throw new MailSendException("simulated delivery failure");
     }
 

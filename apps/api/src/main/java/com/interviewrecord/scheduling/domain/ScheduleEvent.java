@@ -31,6 +31,8 @@ public class ScheduleEvent {
     @Column(length = 2000) private String notes;
     @Column(nullable = false, length = 16) private String status;
     @Column(name = "manual_urgency", length = 16) private String manualUrgency;
+    /** 提醒覆盖：NULL=跟随偏好默认；''=关闭；'1440,30'=自定义分钟数。 */
+    @Column(name = "reminder_offsets", length = 120) private String reminderOffsets;
     @Version private long version;
     @Column(name = "created_at", nullable = false, updatable = false) private Instant createdAt;
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;
@@ -57,6 +59,7 @@ public class ScheduleEvent {
     public String notes() { return notes; }
     public String status() { return status; }
     public String manualUrgency() { return manualUrgency; }
+    public String reminderOffsets() { return reminderOffsets; }
     public long version() { return version; }
     public Instant createdAt() { return createdAt; }
     public Instant updatedAt() { return updatedAt; }
@@ -88,6 +91,11 @@ public class ScheduleEvent {
     /** Pass null to clear the manual override and restore automatic urgency. */
     public void overrideUrgency(String manualUrgency, Instant now) {
         this.manualUrgency = manualUrgency; this.updatedAt = now;
+    }
+
+    /** 覆盖提醒配置：null=跟随默认，''=关闭，'1440,30'=自定义。 */
+    public void overrideReminders(String reminderOffsets, Instant now) {
+        this.reminderOffsets = reminderOffsets; this.updatedAt = now;
     }
 
     public void reschedule(Instant startsAt, Instant endsAt, Instant now) {

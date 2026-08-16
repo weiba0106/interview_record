@@ -2,6 +2,7 @@ package com.interviewrecord.mail.infrastructure;
 
 import tools.jackson.databind.ObjectMapper;
 import com.interviewrecord.mail.application.MailGateway;
+import com.interviewrecord.mail.application.ScheduleReminderMail;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
@@ -49,7 +50,7 @@ public class CapturingMailGateway implements MailGateway {
     }
 
     @Override
-    public void sendScheduleReminder(String email, String scheduleTitle, Instant scheduledFor) {
+    public void sendScheduleReminder(String email, ScheduleReminderMail mail) {
         append(email, "SCHEDULE_REMINDER", "/app/schedules");
     }
 

@@ -3,6 +3,7 @@ package com.interviewrecord.reminders.infrastructure;
 import com.interviewrecord.reminders.domain.Reminder;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -10,6 +11,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface JpaReminderRepository extends JpaRepository<Reminder, Long> {
     boolean existsByIdempotencyKey(String idempotencyKey);
+
+    List<Reminder> findAllByUserIdAndScheduleIdInOrderByScheduledAtDesc(Long userId, Set<Long> scheduleIds);
 
     @Modifying
     @Query("update Reminder r set r.status = 'CANCELLED', r.updatedAt = :now "
