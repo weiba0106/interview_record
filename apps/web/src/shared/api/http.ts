@@ -1,5 +1,5 @@
 import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios'
-import { ApiRequestError, toApiRequestError } from './error'
+import { toApiRequestError } from './error'
 
 export const httpClient = axios.create({
   baseURL: '/api/v1', withCredentials: true, xsrfCookieName: 'XSRF-TOKEN', xsrfHeaderName: 'X-XSRF-TOKEN',

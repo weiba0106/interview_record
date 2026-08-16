@@ -2,12 +2,19 @@ import { createRouter, createWebHistory, type RouteLocationNormalizedLoaded } fr
 import { useAuthStore } from '@/shared/auth/auth.store'
 import type { AuthStatus } from '@/shared/auth/auth.types'
 import DashboardView from '@/views/DashboardView.vue'
+import CompaniesView from '@/views/CompaniesView.vue'
+import PositionsView from '@/views/PositionsView.vue'
+import PositionFormView from '@/views/PositionFormView.vue'
+import PositionDetailView from '@/views/PositionDetailView.vue'
+import SchedulesView from '@/views/SchedulesView.vue'
 import ForgotPasswordView from '@/views/ForgotPasswordView.vue'
 import LoginView from '@/views/LoginView.vue'
 import RegisterView from '@/views/RegisterView.vue'
 import ResetPasswordView from '@/views/ResetPasswordView.vue'
 import VerifyEmailView from '@/views/VerifyEmailView.vue'
 import SettingsView from '@/views/SettingsView.vue'
+import InsightsView from '@/views/InsightsView.vue'
+import PublicShareView from '@/views/PublicShareView.vue'
 
 export function resolveGuard(to: Pick<RouteLocationNormalizedLoaded, 'meta'>, auth: Pick<{ status: AuthStatus }, 'status'>) {
   if (to.meta.requiresAuth && auth.status !== 'authenticated') return { name: 'login' }
@@ -25,7 +32,15 @@ export function createAppRouter() {
       { path: '/verify-email', name: 'verify-email', component: VerifyEmailView },
       { path: '/forgot-password', name: 'forgot-password', component: ForgotPasswordView, meta: { guestOnly: true } },
       { path: '/reset-password', name: 'reset-password', component: ResetPasswordView, meta: { guestOnly: true } },
+      { path: '/share/:token', name: 'public-share', component: PublicShareView },
       { path: '/app', name: 'app', component: DashboardView, meta: { requiresAuth: true } },
+      { path: '/app/companies', name: 'companies', component: CompaniesView, meta: { requiresAuth: true } },
+      { path: '/app/positions', name: 'positions', component: PositionsView, meta: { requiresAuth: true } },
+      { path: '/app/positions/new', name: 'new-position', component: PositionFormView, meta: { requiresAuth: true } },
+      { path: '/app/positions/:id', name: 'position-detail', component: PositionDetailView, meta: { requiresAuth: true } },
+      { path: '/app/positions/:id/edit', name: 'edit-position', component: PositionFormView, meta: { requiresAuth: true } },
+      { path: '/app/schedules', name: 'schedules', component: SchedulesView, meta: { requiresAuth: true } },
+      { path: '/app/insights', name: 'insights', component: InsightsView, meta: { requiresAuth: true } },
       { path: '/app/settings', name: 'settings', component: SettingsView, meta: { requiresAuth: true } },
     ],
   })
