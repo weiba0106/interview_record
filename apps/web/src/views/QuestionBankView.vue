@@ -106,7 +106,7 @@ function metaLine(item: QuestionBankItem): string {
 </script>
 
 <template>
-  <main class="question-bank" aria-labelledby="question-bank-heading">
+  <main class="question-bank page-center" aria-labelledby="question-bank-heading">
     <div class="page-head">
       <div>
         <span class="eyebrow">面试题库</span>
